@@ -1,0 +1,19 @@
+{
+  "name": "Denkarium Capture",
+  "short_name": "Denkarium",
+  "description": "Schnellerfassung von Gedanken per Sprache für das Denkarium-Vault.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
