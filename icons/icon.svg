@@ -1,4 +1,21 @@
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="memory" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#e8f3ff"/>
+      <stop offset="45%" stop-color="#9fc9e8"/>
+      <stop offset="100%" stop-color="#2b4a63"/>
+    </radialGradient>
+  </defs>
+
   <rect width="512" height="512" fill="#000000"/>
-  <circle cx="256" cy="256" r="150" fill="#f2f2f2"/>
+
+  <!-- basin rim -->
+  <ellipse cx="256" cy="270" rx="150" ry="150" fill="none" stroke="#cfd6db" stroke-width="10" opacity="0.9"/>
+
+  <!-- swirling memory fill -->
+  <circle cx="256" cy="270" r="138" fill="url(#memory)"/>
+
+  <!-- subtle swirl wisp -->
+  <path d="M 190 250 Q 256 215 322 250 Q 300 280 256 260 Q 212 280 190 250 Z"
+        fill="#ffffff" opacity="0.18"/>
 </svg>
