@@ -3,9 +3,29 @@
 // Zugriff ist über den Scope "drive.file" auf genau diesen Ordner beschränkt.
 
 const INBOX_FOLDER_KEY = 'denkarium_inbox_folder_id';
+const TOKEN_STORAGE_KEY = 'denkarium_google_token';
 
-let driveAccessToken = null;
-let driveTokenExpiry = 0;
+// Zugriffstoken über Seiten-Neuladen hinweg merken (localStorage), damit man
+// sich nicht bei jedem App-Start/jeder Notiz neu anmelden muss - gilt bis
+// zum Ablauf des Tokens (~55 Minuten nach der letzten Anmeldung).
+function loadStoredToken() {
+  try {
+    const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return { token: null, expiry: 0 };
+    const parsed = JSON.parse(raw);
+    return { token: parsed.token || null, expiry: parsed.expiry || 0 };
+  } catch (e) {
+    return { token: null, expiry: 0 };
+  }
+}
+
+function storeToken(token, expiry) {
+  localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ token, expiry }));
+}
+
+const storedToken = loadStoredToken();
+let driveAccessToken = storedToken.token;
+let driveTokenExpiry = storedToken.expiry;
 let tokenClient = null;
 let pickerApiLoaded = false;
 
@@ -32,6 +52,7 @@ function requestAccessToken(interactive) {
       if (response.error) { reject(response); return; }
       driveAccessToken = response.access_token;
       driveTokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
+      storeToken(driveAccessToken, driveTokenExpiry);
       resolve(driveAccessToken);
     };
     client.requestAccessToken({ prompt: interactive ? 'consent' : '' });

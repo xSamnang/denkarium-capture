@@ -109,6 +109,7 @@ async function startRecording() {
     recordingTick();
   } catch (err) {
     console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
+    showToast('Kein Mikrofonzugriff – prüfe die Berechtigung in den Browser-Einstellungen');
   }
 }
 
