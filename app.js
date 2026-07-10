@@ -61,15 +61,36 @@ if (SpeechRecognitionImpl) {
 let pendingStopAction = null; // 'review' | 'cancel' | null
 let stopFallbackTimer = null;
 
-function finishPendingStop() {
+async function finishPendingStop() {
   const action = pendingStopAction;
   pendingStopAction = null;
   if (stopFallbackTimer) { clearTimeout(stopFallbackTimer); stopFallbackTimer = null; }
   if (action === 'review') {
-    openTextEntry(finalTranscript.trim());
+    const text = finalTranscript.trim();
+    if (text) {
+      await saveTranscriptDirectly(text);
+    } else {
+      showToast('Nichts erkannt – bitte erneut versuchen');
+    }
   } else if (action === 'cancel') {
     finalTranscript = '';
     showToast('Aufnahme verworfen');
+  }
+}
+
+async function saveTranscriptDirectly(text) {
+  showToast('Speichere in Google Drive …');
+  try {
+    const result = await saveNoteToDrive(text);
+    addRecentEntry({ id: result.id, name: result.name, text, createdAt: Date.now() });
+    showToast('In Google Drive gespeichert');
+  } catch (err) {
+    console.error('Speichern in Drive fehlgeschlagen:', err);
+    if (err && (err.error === 'access_denied' || err.error === 'popup_closed_by_user')) {
+      showToast('Google-Anmeldung abgebrochen – bitte erneut versuchen und auf "Weiter" klicken');
+    } else {
+      showToast('Fehler beim Speichern – bitte erneut versuchen');
+    }
   }
 }
 
@@ -80,16 +101,18 @@ function applyVolume(volume01) {
   lensHalo.style.opacity = (0.85 + clamped * 0.15).toFixed(2);
 
   if (recording) {
-    recordButton.style.transform = `scale(${1.05 + clamped * 0.08})`;
-    recordButton.style.boxShadow = `0 0 0 ${8 + clamped * 22}px rgba(255,255,255,${(0.05 + clamped * 0.12).toFixed(2)})`;
+    recordButton.style.transform = `scale(${1 + clamped * 0.22})`;
+    recordButton.style.boxShadow = `0 0 0 ${10 + clamped * 40}px rgba(255,255,255,${(0.04 + clamped * 0.16).toFixed(2)})`;
   }
 }
 
 function idleLoop(t) {
-  if (!recording) {
-    const breathing = (Math.sin(t / 1800) * 0.5 + 0.5) * 0.1;
-    applyVolume(breathing);
-  }
+  // sobald aufgenommen wird, übernehmen recordingTick/fakeRecordingTick die
+  // Schleife - hier NICHT weiter neu anstoßen, sonst laufen zwei rAF-Ketten
+  // parallel und überschreiben sich gegenseitig die gemeinsame rafId
+  if (recording) return;
+  const breathing = (Math.sin(t / 1800) * 0.5 + 0.5) * 0.1;
+  applyVolume(breathing);
   rafId = requestAnimationFrame(idleLoop);
 }
 
@@ -100,6 +123,16 @@ function recordingTick() {
   for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
   applyVolume(sum / dataArray.length / 255);
   rafId = requestAnimationFrame(recordingTick);
+}
+
+// läuft, wenn kein echtes Mikrofon-Level verfügbar ist (z. B. Zugriff
+// verweigert) - simuliert eine lebendige Bewegung, damit der Button trotzdem
+// sichtbar "lebt", statt während der Aufnahme regungslos dazustehen
+function fakeRecordingTick(t) {
+  if (!recording) return;
+  const wave = (Math.sin(t / 260) * 0.5 + 0.5) * 0.55 + Math.random() * 0.2;
+  applyVolume(Math.min(1, wave));
+  rafId = requestAnimationFrame(fakeRecordingTick);
 }
 
 async function startRecording() {
@@ -129,6 +162,8 @@ async function startRecording() {
   } catch (err) {
     console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
     showToast('Kein Mikrofonzugriff – prüfe die Berechtigung in den Browser-Einstellungen');
+    cancelAnimationFrame(rafId);
+    fakeRecordingTick(performance.now());
   }
 }
 
