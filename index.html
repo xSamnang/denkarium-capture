@@ -25,6 +25,9 @@
   </main>
   <div class="live-caption" id="liveCaption" hidden></div>
 
+  <div class="cancel-trash" id="cancelTrash" hidden>🗑️</div>
+  <div class="lock-indicator" id="lockIndicator" hidden>🔒</div>
+
   <button class="icon-btn icon-btn--pencil" id="pencilBtn" aria-label="Text eingeben">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 20h9" />
@@ -39,51 +42,91 @@
   </button>
   <input type="file" id="fileInput" hidden accept="image/*,application/pdf,.doc,.docx,.txt" />
 
-  <div class="archive-backdrop" id="archiveBackdrop"></div>
-  <aside class="archive-panel" id="archivePanel" aria-hidden="true">
-    <div class="archive-panel__header">
-      <span>Archiv</span>
-      <button class="archive-panel__close" id="archiveClose" aria-label="Schließen">✕</button>
+  <div class="menu-backdrop" id="menuBackdrop"></div>
+  <aside class="menu-sheet" id="menuSheet" aria-hidden="true">
+    <div class="menu-sheet__handle"></div>
+    <button class="menu-sheet__close" id="menuClose" aria-label="Schließen">✕</button>
+
+    <div class="menu-tabs" id="menuTabs">
+      <button type="button" class="menu-tab active" data-tab="settings">Einstellungen</button>
+      <button type="button" class="menu-tab" data-tab="recent">Letzte Einträge</button>
+      <button type="button" class="menu-tab" data-tab="guide">Anleitung</button>
     </div>
-    <div class="archive-panel__body">
-      <p class="archive-placeholder">Noch keine Notizen – Inhalte kommen in einer späteren Phase.</p>
-      <button class="drive-settings-btn" id="driveReconnectBtn" type="button">Google-Drive-Ordner ändern</button>
 
-      <div class="settings-section">
-        <p class="settings-label">Custom-Presets</p>
-        <div class="preset-row" id="presetRow">
-          <button class="preset-btn" data-preset="0" type="button">1</button>
-          <button class="preset-btn" data-preset="1" type="button">2</button>
-          <button class="preset-btn" data-preset="2" type="button">3</button>
-        </div>
+    <div class="menu-panel" data-panel="settings">
+      <h3 class="menu-section-title">Darstellung</h3>
 
-        <p class="settings-label">Farbe innen (Aufnahme-Kreis)</p>
-        <div class="swatch-row" id="innerSwatches">
-          <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
-          <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
-          <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
-          <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
-          <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
-        </div>
-
-        <p class="settings-label">Hintergrund außen</p>
-        <div class="swatch-row" id="outerSwatches">
-          <button class="swatch swatch--stars" data-color="starfield" title="Sternenhimmel (Standard)">✦</button>
-          <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
-          <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
-          <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
-          <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
-          <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
-          <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto">📷</button>
-        </div>
-        <input type="file" id="bgPhotoInput" hidden accept="image/*" />
-
-        <p class="settings-label">Ring-Akzentfarbe</p>
-        <input type="color" id="ringColorInput" class="ring-color-input" value="#ff9a3c" />
-
-        <p class="settings-label">Akzentfarbe Buttons &amp; Umschalter</p>
-        <input type="color" id="uiAccentInput" class="ring-color-input" value="#1a1a1a" />
+      <p class="settings-label">Custom-Presets</p>
+      <div class="preset-row" id="presetRow">
+        <button class="preset-btn" data-preset="0" type="button">1</button>
+        <button class="preset-btn" data-preset="1" type="button">2</button>
+        <button class="preset-btn" data-preset="2" type="button">3</button>
       </div>
+
+      <p class="settings-label">Farbe innen (Aufnahme-Kreis)</p>
+      <div class="swatch-row" id="innerSwatches">
+        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
+        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
+        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
+        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
+        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
+      </div>
+
+      <p class="settings-label">Hintergrund außen</p>
+      <div class="swatch-row" id="outerSwatches">
+        <button class="swatch swatch--stars" data-color="starfield" title="Sternenhimmel (Standard)">✦</button>
+        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
+        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
+        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
+        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
+        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
+        <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto">📷</button>
+      </div>
+      <input type="file" id="bgPhotoInput" hidden accept="image/*" />
+
+      <p class="settings-label">Ring-Akzentfarbe</p>
+      <input type="color" id="ringColorInput" class="ring-color-input" value="#ff9a3c" />
+
+      <p class="settings-label">Akzentfarbe Buttons &amp; Umschalter</p>
+      <input type="color" id="uiAccentInput" class="ring-color-input" value="#1a1a1a" />
+
+      <p class="settings-label">Ring</p>
+      <label class="toggle-row">
+        <span>Ring anzeigen</span>
+        <input type="checkbox" id="ringToggle" checked />
+        <span class="toggle-switch"></span>
+      </label>
+
+      <h3 class="menu-section-title">Speicher</h3>
+      <button class="drive-settings-btn" id="driveReconnectBtn" type="button">Google-Drive-Ordner ändern</button>
+    </div>
+
+    <div class="menu-panel" data-panel="recent" hidden>
+      <div id="recentEntriesList" class="recent-entries-list">
+        <p class="archive-placeholder" id="recentEmptyMsg">Noch keine Einträge.</p>
+      </div>
+    </div>
+
+    <div class="menu-panel" data-panel="guide" hidden>
+      <h3 class="menu-section-title">So funktioniert Denkarium Capture</h3>
+      <p class="guide-text">
+        <strong>Aufnahme-Kreis:</strong> Gedrückt halten zum Sprechen, loslassen zum Beenden.
+        Beim Halten nach unten ziehen, um freihändig aufzunehmen (Sperre). Während der Aufnahme
+        zum Mülleimer-Symbol ziehen, um sie zu verwerfen.
+      </p>
+      <p class="guide-text">
+        <strong>Stift-Symbol:</strong> Notiz manuell per Tastatur eingeben.
+      </p>
+      <p class="guide-text">
+        <strong>Büroklammer-Symbol:</strong> Datei oder Bild aus der Galerie an Google Drive senden.
+      </p>
+      <p class="guide-text">
+        <strong>Umschalter oben:</strong> Zwischen Hell-, Dunkel- und Custom-Darstellung wechseln.
+      </p>
+      <p class="guide-text">
+        <strong>Dieses Menü:</strong> Von der unteren Bildschirmhälfte nach oben wischen, um
+        Einstellungen, letzte Einträge und diese Anleitung zu öffnen.
+      </p>
     </div>
   </aside>
 

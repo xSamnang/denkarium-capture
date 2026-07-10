@@ -49,6 +49,25 @@ const outerSwatches = document.getElementById('outerSwatches');
 const bgPhotoInput = document.getElementById('bgPhotoInput');
 const ringColorInput = document.getElementById('ringColorInput');
 const uiAccentInput = document.getElementById('uiAccentInput');
+const ringToggle = document.getElementById('ringToggle');
+const stageEl = document.querySelector('.stage');
+const RING_ENABLED_KEY = 'denkarium_ring_enabled';
+
+function isRingEnabled() {
+  const v = localStorage.getItem(RING_ENABLED_KEY);
+  return v === null ? true : v === '1';
+}
+
+function applyRingEnabled() {
+  const enabled = isRingEnabled();
+  stageEl.classList.toggle('ring-disabled', !enabled);
+  ringToggle.checked = enabled;
+}
+
+ringToggle.addEventListener('change', () => {
+  localStorage.setItem(RING_ENABLED_KEY, ringToggle.checked ? '1' : '0');
+  applyRingEnabled();
+});
 
 function setRingColor(hex) {
   document.documentElement.style.setProperty('--ring-color', hex);
@@ -241,3 +260,4 @@ uiAccentInput.addEventListener('input', () => {
 });
 
 applyTheme();
+applyRingEnabled();

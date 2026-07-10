@@ -91,28 +91,40 @@ async function ensureInboxFolder(forcePick) {
   return folderId;
 }
 
-function buildMarkdownFilename(date) {
+function buildDateString(date) {
   const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_`
-    + `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}.md`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-async function saveNoteToDrive(text) {
-  const token = await ensureAccessToken();
-  const folderId = await ensureInboxFolder(false);
+// findet für <dateStr>_1, <dateStr>_2, ... die nächste freie fortlaufende Nummer
+async function getNextSequenceNumber(token, folderId, dateStr) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false and name contains '${dateStr}_'`);
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(name)&pageSize=1000`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Drive-Fehler ${response.status}: ${errText}`);
+  }
+  const data = await response.json();
+  const pattern = new RegExp(`^${dateStr}_(\\d+)`);
+  let max = 0;
+  (data.files || []).forEach((f) => {
+    const m = f.name.match(pattern);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return max + 1;
+}
 
-  const metadata = {
-    name: buildMarkdownFilename(new Date()),
-    parents: [folderId],
-    mimeType: 'text/markdown',
-  };
+async function uploadMarkdownFile(token, folderId, filename, text) {
+  const metadata = { name: filename, parents: [folderId], mimeType: 'text/markdown' };
   const boundary = 'denkarium-boundary';
   const body =
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`
     + `--${boundary}\r\nContent-Type: text/markdown; charset=UTF-8\r\n\r\n${text}\r\n`
     + `--${boundary}--`;
 
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -126,6 +138,23 @@ async function saveNoteToDrive(text) {
     throw new Error(`Drive-Fehler ${response.status}: ${errText}`);
   }
   return response.json();
+}
+
+async function saveNoteToDrive(text) {
+  const token = await ensureAccessToken();
+  const folderId = await ensureInboxFolder(false);
+  const dateStr = buildDateString(new Date());
+  const seq = await getNextSequenceNumber(token, folderId, dateStr);
+  const filename = `${dateStr}_${seq}.md`;
+  return uploadMarkdownFile(token, folderId, filename, text);
+}
+
+async function saveEditedVersion(originalName, text) {
+  const token = await ensureAccessToken();
+  const folderId = await ensureInboxFolder(false);
+  const baseName = originalName.replace(/\.md$/, '');
+  const filename = `${baseName}2.0.md`;
+  return uploadMarkdownFile(token, folderId, filename, text);
 }
 
 async function uploadFileToDrive(file) {

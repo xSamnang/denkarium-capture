@@ -2,11 +2,17 @@
 const recordButton = document.getElementById('recordButton');
 const lensHalo = document.getElementById('lensHalo');
 const liveCaption = document.getElementById('liveCaption');
+const cancelTrash = document.getElementById('cancelTrash');
+const lockIndicator = document.getElementById('lockIndicator');
 const baseRingDuration = 3.5;
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;
 let recording = false;
+let locked = false;
+let pendingCancel = false;
+let pressStartX = 0;
+let pressStartY = 0;
 
 // --- Sprach-zu-Text (Web Speech API) ---
 const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -53,6 +59,11 @@ function applyVolume(volume01) {
   const factor = Math.max(0.12, 1 - clamped * 0.88);
   lensHalo.style.animationDuration = (baseRingDuration * factor) + 's';
   lensHalo.style.opacity = (0.85 + clamped * 0.15).toFixed(2);
+
+  if (recording) {
+    recordButton.style.transform = `scale(${1.05 + clamped * 0.08})`;
+    recordButton.style.boxShadow = `0 0 0 ${8 + clamped * 22}px rgba(255,255,255,${(0.05 + clamped * 0.12).toFixed(2)})`;
+  }
 }
 
 function idleLoop(t) {
@@ -73,7 +84,7 @@ function recordingTick() {
 }
 
 async function startRecording() {
-  recordButton.classList.add('pressed');
+  recordButton.classList.add('recording');
   recording = true;
 
   finalTranscript = '';
@@ -101,10 +112,17 @@ async function startRecording() {
   }
 }
 
-function stopRecording() {
-  recordButton.classList.remove('pressed');
+function stopRecordingInternals() {
+  recordButton.classList.remove('recording');
+  recordButton.style.transform = '';
+  recordButton.style.boxShadow = '';
   recording = false;
+  locked = false;
   liveCaption.hidden = true;
+  cancelTrash.hidden = true;
+  cancelTrash.classList.remove('armed');
+  lockIndicator.hidden = true;
+  pendingCancel = false;
 
   if (recognition) {
     recognitionShouldRun = false;
@@ -115,14 +133,96 @@ function stopRecording() {
   if (audioCtx) { audioCtx.close(); audioCtx = null; }
   cancelAnimationFrame(rafId);
   idleLoop(performance.now());
+}
 
+function stopRecording() {
+  stopRecordingInternals();
   openTextEntry(finalTranscript.trim());
 }
 
-recordButton.addEventListener('pointerdown', startRecording);
-['pointerup', 'pointerleave', 'pointercancel'].forEach((evt) =>
-  recordButton.addEventListener(evt, stopRecording)
+function cancelRecording() {
+  stopRecordingInternals();
+  finalTranscript = '';
+  showToast('Aufnahme verworfen');
+}
+
+function engageLock() {
+  locked = true;
+  lockIndicator.hidden = false;
+  cancelTrash.hidden = true;
+  cancelTrash.classList.remove('armed');
+  pendingCancel = false;
+  document.removeEventListener('pointermove', onRecordPointerMove);
+}
+
+function onRecordPointerMove(e) {
+  if (!recording || locked) return;
+  const dx = e.clientX - pressStartX;
+  const dy = e.clientY - pressStartY;
+
+  // nach unten ziehen -> Sperren (freihändige Aufnahme)
+  if (dy > 70 && Math.abs(dx) < 60) {
+    engageLock();
+    return;
+  }
+
+  // zum Mülleimer ziehen -> Abbrechen, sobald losgelassen
+  const trashRect = cancelTrash.getBoundingClientRect();
+  const trashCenterX = trashRect.left + trashRect.width / 2;
+  const trashCenterY = trashRect.top + trashRect.height / 2;
+  const dist = Math.hypot(e.clientX - trashCenterX, e.clientY - trashCenterY);
+  pendingCancel = dist < 45;
+  cancelTrash.classList.toggle('armed', pendingCancel);
+}
+
+function onRecordPointerDown(e) {
+  if (recording && locked) {
+    // Tippen während gesperrter Aufnahme beendet sie
+    stopRecording();
+    return;
+  }
+  if (recording) return;
+
+  pressStartX = e.clientX;
+  pressStartY = e.clientY;
+  locked = false;
+  pendingCancel = false;
+  cancelTrash.hidden = false;
+  cancelTrash.classList.remove('armed');
+  lockIndicator.hidden = true;
+
+  if (navigator.vibrate) navigator.vibrate(15);
+
+  // Pointer an den Button binden, damit pointerup/-move zuverlässig
+  // ankommen, auch wenn der Finger beim Ziehen (Sperren/Abbrechen) den
+  // Button verlässt.
+  try { recordButton.setPointerCapture(e.pointerId); } catch (err) { /* nicht unterstützt */ }
+
+  document.addEventListener('pointermove', onRecordPointerMove);
+  startRecording();
+}
+
+function onRecordPointerUp() {
+  document.removeEventListener('pointermove', onRecordPointerMove);
+  if (!recording || locked) return; // im gesperrten Zustand läuft die Aufnahme weiter
+
+  if (pendingCancel) {
+    cancelRecording();
+  } else {
+    stopRecording();
+  }
+}
+
+recordButton.addEventListener('pointerdown', onRecordPointerDown);
+// bewusst kein 'pointerleave' hier - beim Ziehen zum Sperren/Abbrechen
+// verlässt der Finger den Button, die Aufnahme soll dabei aber weiterlaufen
+['pointerup', 'pointercancel'].forEach((evt) =>
+  recordButton.addEventListener(evt, onRecordPointerUp)
 );
+
+lockIndicator.addEventListener('click', () => {
+  if (recording && locked) stopRecording();
+});
 
 idleLoop(performance.now());
 
@@ -136,6 +236,59 @@ function showToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
+// --- Letzte Einträge (max. 10, nur lokal - Drive-Dateien werden nie gelöscht) ---
+const RECENT_ENTRIES_KEY = 'denkarium_recent_entries';
+const recentEntriesList = document.getElementById('recentEntriesList');
+const recentEmptyMsg = document.getElementById('recentEmptyMsg');
+
+function loadRecentEntries() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_ENTRIES_KEY));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+let recentEntries = loadRecentEntries();
+
+function saveRecentEntries() {
+  localStorage.setItem(RECENT_ENTRIES_KEY, JSON.stringify(recentEntries));
+}
+
+function renderRecentEntries() {
+  recentEntriesList.querySelectorAll('.recent-entry').forEach((el) => el.remove());
+  recentEmptyMsg.hidden = recentEntries.length > 0;
+  recentEntries.forEach((entry, index) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'recent-entry';
+    btn.dataset.index = String(index);
+    btn.innerHTML =
+      `<span class="recent-entry__text"></span><span class="recent-entry__name"></span>`;
+    btn.querySelector('.recent-entry__text').textContent = entry.text;
+    btn.querySelector('.recent-entry__name').textContent = entry.name;
+    recentEntriesList.appendChild(btn);
+  });
+}
+
+function addRecentEntry(entry) {
+  recentEntries.unshift(entry);
+  recentEntries = recentEntries.slice(0, 10);
+  saveRecentEntries();
+  renderRecentEntries();
+}
+
+recentEntriesList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.recent-entry');
+  if (!btn) return;
+  const index = Number(btn.dataset.index);
+  const entry = recentEntries[index];
+  if (entry) openTextEntry(entry.text, index);
+});
+
+renderRecentEntries();
+
 // --- Stift-Icon: manuelle Text-Notiz ---
 const pencilBtn = document.getElementById('pencilBtn');
 const textEntry = document.getElementById('textEntry');
@@ -143,7 +296,11 @@ const textEntryInput = document.getElementById('textEntryInput');
 const textEntryCancel = document.getElementById('textEntryCancel');
 const textEntrySave = document.getElementById('textEntrySave');
 
-function openTextEntry(prefillText) {
+let editingEntryIndex = null;
+
+function openTextEntry(prefillText, entryIndex) {
+  editingEntryIndex = entryIndex === undefined ? null : entryIndex;
+  textEntrySave.textContent = editingEntryIndex === null ? 'Speichern' : 'Weiter';
   textEntry.hidden = false;
   textEntryInput.value = prefillText || '';
   textEntryInput.focus();
@@ -158,7 +315,16 @@ textEntrySave.addEventListener('click', async () => {
   textEntrySave.disabled = true;
   showToast('Speichere in Google Drive …');
   try {
-    await saveNoteToDrive(text);
+    if (editingEntryIndex !== null) {
+      const original = recentEntries[editingEntryIndex];
+      const result = await saveEditedVersion(original.name, text);
+      recentEntries[editingEntryIndex] = { id: result.id, name: result.name, text, createdAt: original.createdAt };
+      saveRecentEntries();
+      renderRecentEntries();
+    } else {
+      const result = await saveNoteToDrive(text);
+      addRecentEntry({ id: result.id, name: result.name, text, createdAt: Date.now() });
+    }
     textEntry.hidden = true;
     showToast('In Google Drive gespeichert');
   } catch (err) {
@@ -166,6 +332,18 @@ textEntrySave.addEventListener('click', async () => {
     showToast('Fehler beim Speichern – bitte erneut versuchen');
   } finally {
     textEntrySave.disabled = false;
+  }
+});
+
+// --- Google-Drive-Ordner manuell ändern (im Menü) ---
+document.getElementById('driveReconnectBtn').addEventListener('click', async () => {
+  try {
+    const token = await ensureAccessToken();
+    const folderId = await pickInboxFolder(token);
+    localStorage.setItem(INBOX_FOLDER_KEY, folderId);
+    showToast('Inbox-Ordner aktualisiert');
+  } catch (err) {
+    showToast('Abgebrochen oder fehlgeschlagen');
   }
 });
 
@@ -201,24 +379,35 @@ fileInput.addEventListener('change', async () => {
   }
 });
 
-// --- Swipe-Archiv-Menü ---
-const archivePanel = document.getElementById('archivePanel');
-const archiveBackdrop = document.getElementById('archiveBackdrop');
-const archiveClose = document.getElementById('archiveClose');
+// --- Swipe-up-Menü (Einstellungen / Letzte Einträge / Anleitung) ---
+const menuSheet = document.getElementById('menuSheet');
+const menuBackdrop = document.getElementById('menuBackdrop');
+const menuClose = document.getElementById('menuClose');
+const menuTabs = document.getElementById('menuTabs');
 
 function openArchive() {
-  archivePanel.classList.add('open');
-  archiveBackdrop.classList.add('open');
-  archivePanel.setAttribute('aria-hidden', 'false');
+  menuSheet.classList.add('open');
+  menuBackdrop.classList.add('open');
+  menuSheet.setAttribute('aria-hidden', 'false');
 }
 function closeArchive() {
-  archivePanel.classList.remove('open');
-  archiveBackdrop.classList.remove('open');
-  archivePanel.setAttribute('aria-hidden', 'true');
+  menuSheet.classList.remove('open');
+  menuBackdrop.classList.remove('open');
+  menuSheet.setAttribute('aria-hidden', 'true');
 }
 
-archiveClose.addEventListener('click', closeArchive);
-archiveBackdrop.addEventListener('click', closeArchive);
+menuClose.addEventListener('click', closeArchive);
+menuBackdrop.addEventListener('click', closeArchive);
+
+menuTabs.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('.menu-tab');
+  if (!tabBtn) return;
+  const target = tabBtn.dataset.tab;
+  menuTabs.querySelectorAll('.menu-tab').forEach((btn) => btn.classList.toggle('active', btn === tabBtn));
+  menuSheet.querySelectorAll('.menu-panel').forEach((panel) => {
+    panel.hidden = panel.dataset.panel !== target;
+  });
+});
 
 // --- PIN-Schutz fürs Archiv ---
 const PIN_STORAGE_KEY = 'denkarium_pin_hash';
@@ -327,13 +516,15 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchend', (e) => {
   if (touchStartX === null) return;
   const t = e.changedTouches[0];
-  const dx = t.clientX - touchStartX;
-  const dy = Math.abs(t.clientY - touchStartY);
+  const dx = Math.abs(t.clientX - touchStartX);
+  const dy = t.clientY - touchStartY; // negative = nach oben gewischt
 
-  const panelOpen = archivePanel.classList.contains('open');
-  if (!panelOpen && touchStartX < 40 && dx > 70 && dy < 60) {
+  const panelOpen = menuSheet.classList.contains('open');
+  const startedInLowerHalf = touchStartY > window.innerHeight / 2;
+
+  if (!panelOpen && startedInLowerHalf && dy < -70 && dx < 60) {
     openPinGate();
-  } else if (panelOpen && dx < -70 && dy < 60) {
+  } else if (panelOpen && dy > 70 && dx < 60) {
     closeArchive();
   }
   touchStartX = null;
