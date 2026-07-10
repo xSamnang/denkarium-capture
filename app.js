@@ -336,7 +336,11 @@ textEntrySave.addEventListener('click', async () => {
     showToast('In Google Drive gespeichert');
   } catch (err) {
     console.error('Speichern in Drive fehlgeschlagen:', err);
-    showToast('Fehler beim Speichern – bitte erneut versuchen');
+    if (err && (err.error === 'access_denied' || err.error === 'popup_closed_by_user')) {
+      showToast('Google-Anmeldung abgebrochen – bitte erneut versuchen und auf "Weiter" klicken');
+    } else {
+      showToast('Fehler beim Speichern – bitte erneut versuchen');
+    }
   } finally {
     textEntrySave.disabled = false;
   }

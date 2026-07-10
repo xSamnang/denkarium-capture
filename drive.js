@@ -49,7 +49,14 @@ function requestAccessToken(interactive) {
   return new Promise((resolve, reject) => {
     const client = getTokenClient();
     client.callback = (response) => {
-      if (response.error) { reject(response); return; }
+      if (response.error) {
+        // Client verwerfen, damit der nächste Versuch garantiert mit einem
+        // frischen, unbelasteten Client startet (statt evtl. hängenzubleiben,
+        // nachdem der Nutzer die Anmeldung abgebrochen hat).
+        tokenClient = null;
+        reject(response);
+        return;
+      }
       driveAccessToken = response.access_token;
       driveTokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
       storeToken(driveAccessToken, driveTokenExpiry);
