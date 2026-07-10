@@ -38,13 +38,25 @@ function requestAccessToken(interactive) {
   });
 }
 
+const GOOGLE_GRANTED_KEY = 'denkarium_google_granted';
+
 async function ensureAccessToken() {
   if (driveAccessToken && Date.now() < driveTokenExpiry) return driveAccessToken;
-  try {
-    return await requestAccessToken(false);
-  } catch (e) {
-    return await requestAccessToken(true);
+
+  // Nur nach einer bereits einmal erteilten Erlaubnis leise (ohne Popup)
+  // versuchen zu erneuern - sonst direkt mit Popup anfragen, damit der
+  // Klick-Bezug für den Popup-Blocker erhalten bleibt.
+  if (localStorage.getItem(GOOGLE_GRANTED_KEY)) {
+    try {
+      return await requestAccessToken(false);
+    } catch (e) {
+      // leiser Versuch gescheitert (z. B. Sitzung abgelaufen) - mit Popup erneut versuchen
+    }
   }
+
+  const token = await requestAccessToken(true);
+  localStorage.setItem(GOOGLE_GRANTED_KEY, '1');
+  return token;
 }
 
 function pickInboxFolder(accessToken) {
