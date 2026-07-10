@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --ring-color: #ff9a3c;
 }
 
 * {
@@ -66,9 +67,18 @@ html, body {
   height: calc(var(--btn-size) * 1.45);
   border-radius: 50%;
   background: conic-gradient(from 0deg,
-    #ff9a3c 0deg, #ffffff 35deg, #ffb35c 70deg, #ff7a2e 100deg,
-    #ff5a1f 130deg, #ffd8a8 150deg, #ff8c3d 170deg,
-    #ffffff 210deg, #ff9a3c 250deg, #ffe3bf 280deg, #ff7a2e 320deg, #ff9a3c 360deg);
+    var(--ring-color) 0deg,
+    #ffffff 35deg,
+    color-mix(in srgb, var(--ring-color) 70%, white) 70deg,
+    var(--ring-color) 100deg,
+    color-mix(in srgb, var(--ring-color) 75%, black) 130deg,
+    color-mix(in srgb, var(--ring-color) 25%, white) 150deg,
+    var(--ring-color) 170deg,
+    #ffffff 210deg,
+    var(--ring-color) 250deg,
+    color-mix(in srgb, var(--ring-color) 25%, white) 280deg,
+    color-mix(in srgb, var(--ring-color) 75%, black) 320deg,
+    var(--ring-color) 360deg);
   -webkit-mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
   mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
   opacity: 0.95;
@@ -98,6 +108,34 @@ html, body {
   transform: scale(0.96);
 }
 
+.theme-switcher {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  background: rgba(20,20,26,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 999px;
+  padding: 3px;
+  z-index: 2;
+}
+.theme-switcher button {
+  border: none;
+  background: transparent;
+  color: #ccc;
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-switcher button.active {
+  background: #ffffff;
+  color: #111;
+}
+
 .live-caption {
   position: fixed;
   bottom: 100px;
@@ -105,17 +143,25 @@ html, body {
   transform: translateX(-50%);
   max-width: min(85vw, 480px);
   text-align: center;
-  color: rgba(242,242,242,0.85);
+  color: rgba(242,242,242,0.9);
+  background: rgba(20,20,26,0.7);
+  padding: 8px 14px;
+  border-radius: 10px;
   font-size: 15px;
   line-height: 1.4;
   z-index: 2;
   pointer-events: none;
 }
+.live-caption:empty {
+  background: transparent;
+  padding: 0;
+}
 .live-caption[hidden] {
   display: none;
 }
 
-/* corner icon buttons */
+/* corner icon buttons - fixed dark chip so they stay visible on any
+   background color/photo chosen for the outside area */
 .icon-btn {
   position: fixed;
   bottom: max(28px, env(safe-area-inset-bottom));
@@ -123,7 +169,7 @@ html, body {
   height: 48px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
+  background: rgba(20,20,26,0.85);
   color: #e8e8ea;
   display: flex;
   align-items: center;
@@ -135,7 +181,7 @@ html, body {
 }
 .icon-btn:active {
   transform: scale(0.92);
-  background: rgba(255,255,255,0.14);
+  background: rgba(20,20,26,0.95);
 }
 .icon-btn svg {
   width: 20px;
@@ -236,6 +282,36 @@ html, body {
 .swatch--stars,
 .swatch--photo {
   background: rgba(255,255,255,0.06);
+}
+
+.preset-row {
+  display: flex;
+  gap: 10px;
+}
+.preset-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: #f2f2f2;
+  font-size: 13px;
+  cursor: pointer;
+}
+.preset-btn.active {
+  background: #ffffff;
+  color: #111;
+  border-color: #ffffff;
+}
+
+.ring-color-input {
+  width: 52px;
+  height: 34px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: transparent;
+  cursor: pointer;
 }
 
 .archive-backdrop {

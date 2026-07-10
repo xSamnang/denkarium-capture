@@ -13,6 +13,12 @@
   <div class="space"></div>
   <div class="dust"></div>
 
+  <div class="theme-switcher" id="themeSwitcher">
+    <button type="button" data-mode="light">Hell</button>
+    <button type="button" data-mode="dark">Dunkel</button>
+    <button type="button" data-mode="custom">Custom</button>
+  </div>
+
   <main class="stage">
     <div class="lens-halo" id="lensHalo"></div>
     <button class="record-button" id="recordButton" aria-label="Aufnahme starten"></button>
@@ -44,6 +50,13 @@
       <button class="drive-settings-btn" id="driveReconnectBtn" type="button">Google-Drive-Ordner ändern</button>
 
       <div class="settings-section">
+        <p class="settings-label">Custom-Presets</p>
+        <div class="preset-row" id="presetRow">
+          <button class="preset-btn" data-preset="0" type="button">1</button>
+          <button class="preset-btn" data-preset="1" type="button">2</button>
+          <button class="preset-btn" data-preset="2" type="button">3</button>
+        </div>
+
         <p class="settings-label">Farbe innen (Aufnahme-Kreis)</p>
         <div class="swatch-row" id="innerSwatches">
           <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
@@ -64,6 +77,9 @@
           <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto">📷</button>
         </div>
         <input type="file" id="bgPhotoInput" hidden accept="image/*" />
+
+        <p class="settings-label">Ring-Akzentfarbe</p>
+        <input type="color" id="ringColorInput" class="ring-color-input" value="#ff9a3c" />
       </div>
     </div>
   </aside>

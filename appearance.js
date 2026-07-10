@@ -1,8 +1,12 @@
-// --- Darstellung anpassen: Farbe innen (Button) und außen (Hintergrund) ---
+// --- Erscheinungsbild: Hell/Dunkel/Custom-Umschalter + Custom-Presets ---
+// Hell und Dunkel sind feste Vorgaben. Im Custom-Modus lassen sich Farbe
+// innen/außen und die Ring-Akzentfarbe frei wählen und in bis zu 3 Presets
+// gespeichert werden.
 
-const INNER_COLOR_KEY = 'denkarium_inner_color';
-const OUTER_MODE_KEY = 'denkarium_outer_mode'; // 'starfield' | Farbname | 'photo'
-const OUTER_PHOTO_KEY = 'denkarium_outer_photo'; // Daten-URL, nur bei mode === 'photo'
+const THEME_MODE_KEY = 'denkarium_theme_mode';
+const ACTIVE_PRESET_KEY = 'denkarium_active_preset';
+const PRESETS_KEY = 'denkarium_custom_presets';
+const DEFAULT_RING_COLOR = '#ff9a3c';
 
 const SWATCH_COLORS = {
   black: '#000000',
@@ -12,18 +16,47 @@ const SWATCH_COLORS = {
   lightblue: '#4fc3f7',
 };
 
+function defaultPreset() {
+  return { inner: 'black', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR };
+}
+
+function loadPresets() {
+  const raw = localStorage.getItem(PRESETS_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === 3) return parsed;
+    } catch (e) { /* Presets waren beschädigt - Standard verwenden */ }
+  }
+  return [defaultPreset(), defaultPreset(), defaultPreset()];
+}
+
+function savePresets() {
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+}
+
+let presets = loadPresets();
+let activePresetIndex = Number(localStorage.getItem(ACTIVE_PRESET_KEY) || 0);
+
 const recordButtonEl = document.getElementById('recordButton');
 const spaceEl = document.querySelector('.space');
 const dustEl = document.querySelector('.dust');
+const themeSwitcher = document.getElementById('themeSwitcher');
+const presetRow = document.getElementById('presetRow');
 const innerSwatches = document.getElementById('innerSwatches');
 const outerSwatches = document.getElementById('outerSwatches');
 const bgPhotoInput = document.getElementById('bgPhotoInput');
+const ringColorInput = document.getElementById('ringColorInput');
 
-function applyInnerColor(colorKey) {
-  recordButtonEl.style.background = SWATCH_COLORS[colorKey] || SWATCH_COLORS.black;
+function setRingColor(hex) {
+  document.documentElement.style.setProperty('--ring-color', hex);
 }
 
-function applyOuterAppearance(mode, photoDataUrl) {
+function setInnerColor(colorKey) {
+  recordButtonEl.style.background = SWATCH_COLORS[colorKey] || '#000000';
+}
+
+function setOuterBackground(mode, photoDataUrl) {
   if (mode === 'photo' && photoDataUrl) {
     spaceEl.hidden = true;
     dustEl.hidden = true;
@@ -49,6 +82,49 @@ function markSelectedSwatch(container, value) {
   container.querySelectorAll('.swatch').forEach((btn) => {
     btn.classList.toggle('selected', btn.dataset.color === value);
   });
+}
+
+function markActivePresetButton() {
+  presetRow.querySelectorAll('.preset-btn').forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.preset) === activePresetIndex);
+  });
+}
+
+function currentThemeMode() {
+  return localStorage.getItem(THEME_MODE_KEY) || 'light';
+}
+
+function applyTheme() {
+  const mode = currentThemeMode();
+
+  if (mode === 'light') {
+    setInnerColor('black');
+    setOuterBackground('white', null);
+    setRingColor(DEFAULT_RING_COLOR);
+  } else if (mode === 'dark') {
+    setInnerColor('white');
+    setOuterBackground('black', null);
+    setRingColor(DEFAULT_RING_COLOR);
+  } else {
+    const preset = presets[activePresetIndex] || defaultPreset();
+    setInnerColor(preset.inner);
+    setOuterBackground(preset.outer, preset.outerPhoto);
+    setRingColor(preset.ring || DEFAULT_RING_COLOR);
+  }
+
+  themeSwitcher.querySelectorAll('button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  const activePreset = presets[activePresetIndex] || defaultPreset();
+  markSelectedSwatch(innerSwatches, activePreset.inner);
+  markSelectedSwatch(outerSwatches, activePreset.outer);
+  ringColorInput.value = activePreset.ring || DEFAULT_RING_COLOR;
+  markActivePresetButton();
+}
+
+function switchToCustomMode() {
+  localStorage.setItem(THEME_MODE_KEY, 'custom');
 }
 
 function downscaleImage(file, maxDim) {
@@ -77,37 +153,41 @@ function downscaleImage(file, maxDim) {
   });
 }
 
-function loadAppearance() {
-  const innerColor = localStorage.getItem(INNER_COLOR_KEY) || 'black';
-  const outerMode = localStorage.getItem(OUTER_MODE_KEY) || 'starfield';
-  const outerPhoto = localStorage.getItem(OUTER_PHOTO_KEY);
-  applyInnerColor(innerColor);
-  applyOuterAppearance(outerMode, outerPhoto);
-  markSelectedSwatch(innerSwatches, innerColor);
-  markSelectedSwatch(outerSwatches, outerMode);
-}
+themeSwitcher.addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  localStorage.setItem(THEME_MODE_KEY, btn.dataset.mode);
+  applyTheme();
+});
+
+presetRow.addEventListener('click', (e) => {
+  const btn = e.target.closest('.preset-btn');
+  if (!btn) return;
+  activePresetIndex = Number(btn.dataset.preset);
+  localStorage.setItem(ACTIVE_PRESET_KEY, String(activePresetIndex));
+  switchToCustomMode();
+  applyTheme();
+});
 
 innerSwatches.addEventListener('click', (e) => {
   const btn = e.target.closest('.swatch');
   if (!btn) return;
-  const color = btn.dataset.color;
-  localStorage.setItem(INNER_COLOR_KEY, color);
-  applyInnerColor(color);
-  markSelectedSwatch(innerSwatches, color);
+  presets[activePresetIndex].inner = btn.dataset.color;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
 });
 
 outerSwatches.addEventListener('click', (e) => {
   const btn = e.target.closest('.swatch');
   if (!btn) return;
   const mode = btn.dataset.color;
-  if (mode === 'photo') {
-    bgPhotoInput.click();
-    return;
-  }
-  localStorage.setItem(OUTER_MODE_KEY, mode);
-  localStorage.removeItem(OUTER_PHOTO_KEY);
-  applyOuterAppearance(mode, null);
-  markSelectedSwatch(outerSwatches, mode);
+  if (mode === 'photo') { bgPhotoInput.click(); return; }
+  presets[activePresetIndex].outer = mode;
+  presets[activePresetIndex].outerPhoto = null;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
 });
 
 bgPhotoInput.addEventListener('change', async () => {
@@ -116,13 +196,21 @@ bgPhotoInput.addEventListener('change', async () => {
   if (!file) return;
   try {
     const dataUrl = await downscaleImage(file, 1600);
-    localStorage.setItem(OUTER_MODE_KEY, 'photo');
-    localStorage.setItem(OUTER_PHOTO_KEY, dataUrl);
-    applyOuterAppearance('photo', dataUrl);
-    markSelectedSwatch(outerSwatches, 'photo');
+    presets[activePresetIndex].outer = 'photo';
+    presets[activePresetIndex].outerPhoto = dataUrl;
+    savePresets();
+    switchToCustomMode();
+    applyTheme();
   } catch (err) {
     console.error('Hintergrundbild konnte nicht geladen werden:', err);
   }
 });
 
-loadAppearance();
+ringColorInput.addEventListener('input', () => {
+  presets[activePresetIndex].ring = ringColorInput.value;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
+});
+
+applyTheme();
