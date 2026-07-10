@@ -127,3 +127,36 @@ async function saveNoteToDrive(text) {
   }
   return response.json();
 }
+
+async function uploadFileToDrive(file) {
+  const token = await ensureAccessToken();
+  const folderId = await ensureInboxFolder(false);
+
+  const metadata = {
+    name: file.name,
+    parents: [folderId],
+    mimeType: file.type || 'application/octet-stream',
+  };
+  const boundary = 'denkarium-boundary-file';
+  const metadataPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
+  const fileHeader = `--${boundary}\r\nContent-Type: ${metadata.mimeType}\r\n\r\n`;
+  const closing = `\r\n--${boundary}--`;
+
+  // als Blob zusammensetzen statt als String, damit Bild-/Dateibytes nicht beschädigt werden
+  const body = new Blob([metadataPart, fileHeader, file, closing]);
+
+  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Drive-Fehler ${response.status}: ${errText}`);
+  }
+  return response.json();
+}

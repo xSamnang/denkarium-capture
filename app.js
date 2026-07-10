@@ -186,10 +186,18 @@ const paperclipBtn = document.getElementById('paperclipBtn');
 const fileInput = document.getElementById('fileInput');
 
 paperclipBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => {
-  if (fileInput.files && fileInput.files[0]) {
-    showToast(`Ausgewählt: ${fileInput.files[0].name} (Upload folgt in einer späteren Phase)`);
-    fileInput.value = '';
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+  fileInput.value = '';
+
+  showToast(`Lade "${file.name}" zu Google Drive hoch …`);
+  try {
+    await uploadFileToDrive(file);
+    showToast(`"${file.name}" in Google Drive gespeichert`);
+  } catch (err) {
+    console.error('Datei-Upload fehlgeschlagen:', err);
+    showToast('Fehler beim Hochladen – bitte erneut versuchen');
   }
 });
 
