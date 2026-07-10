@@ -151,9 +151,34 @@ function openTextEntry(prefillText) {
 
 pencilBtn.addEventListener('click', () => openTextEntry(''));
 textEntryCancel.addEventListener('click', () => { textEntry.hidden = true; });
-textEntrySave.addEventListener('click', () => {
-  textEntry.hidden = true;
-  showToast('Gespeichert (Ablage folgt in einer späteren Phase)');
+textEntrySave.addEventListener('click', async () => {
+  const text = textEntryInput.value.trim();
+  if (!text) { textEntry.hidden = true; return; }
+
+  textEntrySave.disabled = true;
+  showToast('Speichere in Google Drive …');
+  try {
+    await saveNoteToDrive(text);
+    textEntry.hidden = true;
+    showToast('In Google Drive gespeichert');
+  } catch (err) {
+    console.error('Speichern in Drive fehlgeschlagen:', err);
+    showToast('Fehler beim Speichern – bitte erneut versuchen');
+  } finally {
+    textEntrySave.disabled = false;
+  }
+});
+
+// --- Google-Drive-Ordner manuell ändern (im Archiv-Menü) ---
+document.getElementById('driveReconnectBtn').addEventListener('click', async () => {
+  try {
+    const token = await ensureAccessToken();
+    const folderId = await pickInboxFolder(token);
+    localStorage.setItem(INBOX_FOLDER_KEY, folderId);
+    showToast('Inbox-Ordner aktualisiert');
+  } catch (err) {
+    showToast('Abgebrochen oder fehlgeschlagen');
+  }
 });
 
 // --- Büroklammer-Icon: Datei anhängen ---

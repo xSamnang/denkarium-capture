@@ -41,6 +41,7 @@
     </div>
     <div class="archive-panel__body">
       <p class="archive-placeholder">Noch keine Notizen – Inhalte kommen in einer späteren Phase.</p>
+      <button class="drive-settings-btn" id="driveReconnectBtn" type="button">Google-Drive-Ordner ändern</button>
     </div>
   </aside>
 
@@ -83,6 +84,10 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+  <script src="drive.js"></script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
