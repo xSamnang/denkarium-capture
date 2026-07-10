@@ -46,12 +46,31 @@ if (SpeechRecognitionImpl) {
   });
 
   // manche Browser beenden die Erkennung nach kurzer Sprechpause von sich aus -
-  // solange noch aufgenommen wird, einfach neu starten
+  // solange noch aufgenommen wird, einfach neu starten. Wurde bewusst gestoppt
+  // (Loslassen/Abbrechen), war das der Startschuss, um den finalen Text zu
+  // übernehmen - das letzte Ergebnis kommt sonst erst nach dem Loslassen an.
   recognition.addEventListener('end', () => {
     if (recognitionShouldRun) {
       try { recognition.start(); } catch (e) { /* already running */ }
+      return;
     }
+    if (pendingStopAction) finishPendingStop();
   });
+}
+
+let pendingStopAction = null; // 'review' | 'cancel' | null
+let stopFallbackTimer = null;
+
+function finishPendingStop() {
+  const action = pendingStopAction;
+  pendingStopAction = null;
+  if (stopFallbackTimer) { clearTimeout(stopFallbackTimer); stopFallbackTimer = null; }
+  if (action === 'review') {
+    openTextEntry(finalTranscript.trim());
+  } else if (action === 'cancel') {
+    finalTranscript = '';
+    showToast('Aufnahme verworfen');
+  }
 }
 
 function applyVolume(volume01) {
@@ -125,26 +144,37 @@ function stopRecordingInternals() {
   lockIndicator.hidden = true;
   pendingCancel = false;
 
-  if (recognition) {
-    recognitionShouldRun = false;
-    recognition.stop();
-  }
-
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
   if (audioCtx) { audioCtx.close(); audioCtx = null; }
   cancelAnimationFrame(rafId);
   idleLoop(performance.now());
 }
 
+// Beendet die Spracherkennung und wartet auf ihr tatsächliches 'end'-Ereignis,
+// bevor die Folgeaktion (Notiz-Review öffnen / verwerfen) ausgeführt wird -
+// sonst fehlt oft der zuletzt gesprochene Satz, der erst nach recognition.stop()
+// final ankommt.
+function stopSpeechAndRun(action) {
+  if (recognition && recognitionShouldRun) {
+    pendingStopAction = action;
+    recognitionShouldRun = false;
+    clearTimeout(stopFallbackTimer);
+    stopFallbackTimer = setTimeout(finishPendingStop, 1200);
+    try { recognition.stop(); } catch (e) { finishPendingStop(); }
+  } else {
+    pendingStopAction = action;
+    finishPendingStop();
+  }
+}
+
 function stopRecording() {
   stopRecordingInternals();
-  openTextEntry(finalTranscript.trim());
+  stopSpeechAndRun('review');
 }
 
 function cancelRecording() {
   stopRecordingInternals();
-  finalTranscript = '';
-  showToast('Aufnahme verworfen');
+  stopSpeechAndRun('cancel');
 }
 
 function engageLock() {
