@@ -1,0 +1,150 @@
+// --- Aufnahme-Button: Druck-Feedback + lautstärke-reaktiver Lichtring ---
+const recordButton = document.getElementById('recordButton');
+const lensHalo = document.getElementById('lensHalo');
+const baseRingDuration = 34;
+
+let rafId = null;
+let audioCtx, analyser, dataArray, stream;
+let recording = false;
+
+function applyVolume(volume01) {
+  const clamped = Math.max(0, Math.min(1, volume01));
+  const factor = Math.max(0.12, 1 - clamped * 0.88);
+  lensHalo.style.animationDuration = (baseRingDuration * factor) + 's';
+  lensHalo.style.opacity = (0.85 + clamped * 0.15).toFixed(2);
+}
+
+function idleLoop(t) {
+  if (!recording) {
+    const breathing = (Math.sin(t / 1800) * 0.5 + 0.5) * 0.1;
+    applyVolume(breathing);
+  }
+  rafId = requestAnimationFrame(idleLoop);
+}
+
+function recordingTick() {
+  if (!recording) return;
+  analyser.getByteFrequencyData(dataArray);
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+  applyVolume(sum / dataArray.length / 255);
+  rafId = requestAnimationFrame(recordingTick);
+}
+
+async function startRecording() {
+  recordButton.classList.add('pressed');
+  recording = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    cancelAnimationFrame(rafId);
+    recordingTick();
+  } catch (err) {
+    console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
+  }
+}
+
+function stopRecording() {
+  recordButton.classList.remove('pressed');
+  recording = false;
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  cancelAnimationFrame(rafId);
+  idleLoop(performance.now());
+}
+
+recordButton.addEventListener('pointerdown', startRecording);
+['pointerup', 'pointerleave', 'pointercancel'].forEach((evt) =>
+  recordButton.addEventListener(evt, stopRecording)
+);
+
+idleLoop(performance.now());
+
+// --- Toast-Hinweis (Platzhalter-Feedback für noch nicht fertige Funktionen) ---
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// --- Stift-Icon: manuelle Text-Notiz ---
+const pencilBtn = document.getElementById('pencilBtn');
+const textEntry = document.getElementById('textEntry');
+const textEntryInput = document.getElementById('textEntryInput');
+const textEntryCancel = document.getElementById('textEntryCancel');
+const textEntrySave = document.getElementById('textEntrySave');
+
+pencilBtn.addEventListener('click', () => {
+  textEntry.hidden = false;
+  textEntryInput.value = '';
+  textEntryInput.focus();
+});
+textEntryCancel.addEventListener('click', () => { textEntry.hidden = true; });
+textEntrySave.addEventListener('click', () => {
+  textEntry.hidden = true;
+  showToast('Gespeichert (Ablage folgt in einer späteren Phase)');
+});
+
+// --- Büroklammer-Icon: Datei anhängen ---
+const paperclipBtn = document.getElementById('paperclipBtn');
+const fileInput = document.getElementById('fileInput');
+
+paperclipBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files && fileInput.files[0]) {
+    showToast(`Ausgewählt: ${fileInput.files[0].name} (Upload folgt in einer späteren Phase)`);
+    fileInput.value = '';
+  }
+});
+
+// --- Swipe-Archiv-Menü ---
+const archivePanel = document.getElementById('archivePanel');
+const archiveBackdrop = document.getElementById('archiveBackdrop');
+const archiveClose = document.getElementById('archiveClose');
+
+function openArchive() {
+  archivePanel.classList.add('open');
+  archiveBackdrop.classList.add('open');
+  archivePanel.setAttribute('aria-hidden', 'false');
+}
+function closeArchive() {
+  archivePanel.classList.remove('open');
+  archiveBackdrop.classList.remove('open');
+  archivePanel.setAttribute('aria-hidden', 'true');
+}
+
+archiveClose.addEventListener('click', closeArchive);
+archiveBackdrop.addEventListener('click', closeArchive);
+
+let touchStartX = null;
+let touchStartY = null;
+
+document.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (touchStartX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = Math.abs(t.clientY - touchStartY);
+
+  const panelOpen = archivePanel.classList.contains('open');
+  if (!panelOpen && touchStartX < 40 && dx > 70 && dy < 60) {
+    openArchive();
+  } else if (panelOpen && dx < -70 && dy < 60) {
+    closeArchive();
+  }
+  touchStartX = null;
+  touchStartY = null;
+}, { passive: true });

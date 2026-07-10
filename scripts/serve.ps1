@@ -26,16 +26,21 @@ while ($listener.IsListening) {
   if ($path -eq "/") { $path = "/index.html" }
   $filePath = Join-Path $root ($path.TrimStart("/"))
 
-  if (Test-Path $filePath -PathType Leaf) {
-    $ext = [System.IO.Path]::GetExtension($filePath)
-    $contentType = $mimeMap[$ext]
-    if (-not $contentType) { $contentType = "application/octet-stream" }
-    $bytes = [System.IO.File]::ReadAllBytes($filePath)
-    $response.ContentType = $contentType
-    $response.ContentLength64 = $bytes.Length
-    $response.OutputStream.Write($bytes, 0, $bytes.Length)
-  } else {
-    $response.StatusCode = 404
+  try {
+    if (Test-Path $filePath -PathType Leaf) {
+      $ext = [System.IO.Path]::GetExtension($filePath)
+      $contentType = $mimeMap[$ext]
+      if (-not $contentType) { $contentType = "application/octet-stream" }
+      $bytes = [System.IO.File]::ReadAllBytes($filePath)
+      $response.ContentType = $contentType
+      $response.ContentLength64 = $bytes.Length
+      $response.OutputStream.Write($bytes, 0, $bytes.Length)
+    } else {
+      $response.StatusCode = 404
+    }
+  } catch {
+    # client likely cancelled the request (e.g. duplicate favicon fetch) - ignore
+  } finally {
+    $response.OutputStream.Close()
   }
-  $response.OutputStream.Close()
 }

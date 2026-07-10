@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Schwarzes-Loch-Button Vorschau</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #05060c;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* full-page space background */
+  .space {
+    position: fixed;
+    inset: -10%;
+    background-image:
+      radial-gradient(1.4px 1.4px at 10% 15%, rgba(255,255,255,0.9), transparent),
+      radial-gradient(1px 1px at 35% 5%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.2px 1.2px at 55% 40%, rgba(200,220,255,0.85), transparent),
+      radial-gradient(1px 1px at 20% 50%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1.4px 1.4px at 65% 25%, rgba(255,240,220,0.75), transparent),
+      radial-gradient(1px 1px at 5% 35%, rgba(255,255,255,0.55), transparent),
+      radial-gradient(1.3px 1.3px at 80% 70%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1px 1px at 45% 85%, rgba(210,225,255,0.65), transparent),
+      radial-gradient(1.2px 1.2px at 90% 20%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1px 1px at 70% 55%, rgba(255,245,225,0.6), transparent);
+    background-size: 340px 340px;
+    background-repeat: repeat;
+  }
+
+  .dust {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 22% at 12% 45%, rgba(130,118,95,0.3), transparent 70%),
+      radial-gradient(ellipse 50% 20% at 90% 55%, rgba(95,115,145,0.28), transparent 70%),
+      radial-gradient(ellipse 45% 18% at 50% 85%, rgba(110,100,120,0.22), transparent 70%),
+      radial-gradient(ellipse 40% 16% at 30% 10%, rgba(120,110,130,0.2), transparent 70%);
+    filter: blur(10px);
+  }
+
+  /* stage centers the lensing halo + the black button on the same point */
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* warped ring of gravitationally lensed starlight, sitting in the background around the button */
+  .lens-halo {
+    position: absolute;
+    width: 560px;
+    height: 560px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+      #cfe3ff 0deg, #ffffff 35deg, #e8c9a0 70deg, #e0956b 100deg,
+      #a3493c 130deg, #7a3a45 150deg, #9a5a55 170deg,
+      #cfe3ff 210deg, #ffffff 250deg, #dce8ff 280deg, #e8c9a0 320deg, #cfe3ff 360deg);
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 56%, black 62%, black 80%, transparent 92%);
+    mask-image: radial-gradient(circle closest-side, transparent 56%, black 62%, black 80%, transparent 92%);
+    filter: blur(6px);
+    opacity: 0.85;
+    animation: spin 34s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* the hole itself: flat, featureless black - nothing else */
+  .button {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: #000;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease;
+  }
+
+  .button.pressed {
+    transform: scale(0.96);
+  }
+
+  .label {
+    position: fixed;
+    bottom: 64px;
+    color: #888;
+    font-size: 13px;
+    text-align: center;
+    width: 100%;
+  }
+  .status {
+    position: fixed;
+    bottom: 40px;
+    color: #6ab0ff;
+    font-size: 12px;
+    text-align: center;
+    width: 100%;
+  }
+  .debug {
+    position: fixed;
+    bottom: 8px;
+    color: #555;
+    font-size: 11px;
+    text-align: center;
+    width: 100%;
+  }
+  .debug input { vertical-align: middle; }
+</style>
+</head>
+<body>
+  <div class="space"></div>
+  <div class="dust"></div>
+  <div class="stage">
+    <div class="lens-halo" id="lensHalo"></div>
+    <div class="button" id="rim"></div>
+  </div>
+  <div class="label">Live-Prototyp – Konzept 2: Schwarzes Loch, noch nicht im echten App-Grundgerüst</div>
+  <div class="status" id="status">Bereit – gedrückt halten zum Aufnehmen</div>
+  <div class="debug">Test ohne Mikrofon: <input type="range" id="volTest" min="0" max="100" value="0"></div>
+
+  <script>
+    const rim = document.getElementById('rim');
+    const statusEl = document.getElementById('status');
+    const lensHalo = document.getElementById('lensHalo');
+    const baseRingDuration = 34;
+
+    let rafId = null;
+    let audioCtx, analyser, dataArray, source, stream;
+    let recording = false;
+    let manualVolume = 0;
+
+    function applyVolume(volume01) {
+      const clamped = Math.max(0, Math.min(1, volume01));
+      const factor = Math.max(0.12, 1 - clamped * 0.88);
+      lensHalo.style.animationDuration = (baseRingDuration * factor) + 's';
+      lensHalo.style.opacity = (0.85 + clamped * 0.15).toFixed(2);
+    }
+
+    function idleLoop(t) {
+      if (!recording) {
+        const breathing = manualVolume > 0 ? manualVolume : (Math.sin(t / 1800) * 0.5 + 0.5) * 0.1;
+        applyVolume(breathing);
+      }
+      rafId = requestAnimationFrame(idleLoop);
+    }
+
+    function recordingTick() {
+      if (!recording) return;
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      const avg = sum / dataArray.length / 255;
+      applyVolume(avg);
+      rafId = requestAnimationFrame(recordingTick);
+    }
+
+    async function startRecording() {
+      rim.classList.add('pressed');
+      recording = true;
+      statusEl.textContent = 'Aufnahme läuft …';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        cancelAnimationFrame(rafId);
+        recordingTick();
+      } catch (err) {
+        statusEl.textContent = 'Kein Mikrofon verfügbar – nutze den Test-Regler unten';
+        console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
+      }
+    }
+
+    function stopRecording() {
+      rim.classList.remove('pressed');
+      recording = false;
+      statusEl.textContent = 'Bereit – gedrückt halten zum Aufnehmen';
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+      cancelAnimationFrame(rafId);
+      idleLoop(performance.now());
+    }
+
+    rim.addEventListener('pointerdown', startRecording);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => rim.addEventListener(evt, stopRecording));
+
+    document.getElementById('volTest').addEventListener('input', (e) => {
+      manualVolume = Number(e.target.value) / 100;
+    });
+
+    idleLoop(performance.now());
+  </script>
+</body>
+</html>

@@ -10,11 +10,52 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="placeholder">
-    <h1>Denkarium Capture</h1>
-    <p>Grundgerüst steht. Die eigentliche Aufnahme-Oberfläche kommt in Phase 2.</p>
+  <div class="space"></div>
+  <div class="dust"></div>
+
+  <main class="stage">
+    <div class="lens-halo" id="lensHalo"></div>
+    <button class="record-button" id="recordButton" aria-label="Aufnahme starten"></button>
   </main>
 
+  <button class="icon-btn icon-btn--pencil" id="pencilBtn" aria-label="Text eingeben">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  </button>
+
+  <button class="icon-btn icon-btn--paperclip" id="paperclipBtn" aria-label="Datei anhängen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  </button>
+  <input type="file" id="fileInput" hidden accept="image/*,application/pdf,.doc,.docx,.txt" />
+
+  <div class="archive-backdrop" id="archiveBackdrop"></div>
+  <aside class="archive-panel" id="archivePanel" aria-hidden="true">
+    <div class="archive-panel__header">
+      <span>Archiv</span>
+      <button class="archive-panel__close" id="archiveClose" aria-label="Schließen">✕</button>
+    </div>
+    <div class="archive-panel__body">
+      <p class="archive-placeholder">Noch keine Notizen – Inhalte kommen in einer späteren Phase.</p>
+    </div>
+  </aside>
+
+  <div class="text-entry" id="textEntry" hidden>
+    <div class="text-entry__box">
+      <textarea id="textEntryInput" placeholder="Notiz eingeben …"></textarea>
+      <div class="text-entry__actions">
+        <button id="textEntryCancel" type="button">Abbrechen</button>
+        <button id="textEntrySave" type="button">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
