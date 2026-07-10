@@ -187,6 +187,101 @@ function closeArchive() {
 archiveClose.addEventListener('click', closeArchive);
 archiveBackdrop.addEventListener('click', closeArchive);
 
+// --- PIN-Schutz fürs Archiv ---
+const PIN_STORAGE_KEY = 'denkarium_pin_hash';
+const pinGate = document.getElementById('pinGate');
+const pinTitle = document.getElementById('pinTitle');
+const pinError = document.getElementById('pinError');
+const pinDots = document.getElementById('pinDots');
+const pinKeypad = document.getElementById('pinKeypad');
+const pinCancel = document.getElementById('pinCancel');
+const pinDelete = document.getElementById('pinDelete');
+
+let pinEntered = '';
+let pinMode = 'verify'; // 'verify' | 'set' | 'confirm'
+let pinFirstEntry = '';
+
+async function sha256(text) {
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function renderPinDots() {
+  [...pinDots.children].forEach((dot, i) => dot.classList.toggle('filled', i < pinEntered.length));
+}
+
+function openPinGate() {
+  pinEntered = '';
+  pinError.textContent = '';
+  const hasPin = !!localStorage.getItem(PIN_STORAGE_KEY);
+  pinMode = hasPin ? 'verify' : 'set';
+  pinTitle.textContent = hasPin ? 'PIN eingeben' : 'Neue PIN festlegen';
+  renderPinDots();
+  pinGate.hidden = false;
+}
+
+function closePinGate() {
+  pinGate.hidden = true;
+  pinEntered = '';
+}
+
+function shakePinDots(message) {
+  pinError.textContent = message;
+  pinDots.classList.remove('shake');
+  // reflow erzwingen, damit die Animation bei wiederholtem Fehler erneut abspielt
+  void pinDots.offsetWidth;
+  pinDots.classList.add('shake');
+  pinEntered = '';
+  renderPinDots();
+}
+
+async function submitPin() {
+  if (pinMode === 'set') {
+    pinFirstEntry = pinEntered;
+    pinEntered = '';
+    pinMode = 'confirm';
+    pinTitle.textContent = 'PIN bestätigen';
+    renderPinDots();
+    return;
+  }
+
+  if (pinMode === 'confirm') {
+    if (pinEntered !== pinFirstEntry) {
+      pinMode = 'set';
+      pinFirstEntry = '';
+      pinTitle.textContent = 'Neue PIN festlegen';
+      shakePinDots('PINs stimmten nicht überein – bitte erneut eingeben');
+      return;
+    }
+    localStorage.setItem(PIN_STORAGE_KEY, await sha256(pinEntered));
+    closePinGate();
+    openArchive();
+    return;
+  }
+
+  // mode 'verify'
+  const hash = await sha256(pinEntered);
+  if (hash === localStorage.getItem(PIN_STORAGE_KEY)) {
+    closePinGate();
+    openArchive();
+  } else {
+    shakePinDots('Falsche PIN');
+  }
+}
+
+pinKeypad.addEventListener('click', (e) => {
+  const key = e.target.closest('[data-key]');
+  if (!key || pinEntered.length >= 4) return;
+  pinEntered += key.dataset.key;
+  renderPinDots();
+  if (pinEntered.length === 4) submitPin();
+});
+pinDelete.addEventListener('click', () => {
+  pinEntered = pinEntered.slice(0, -1);
+  renderPinDots();
+});
+pinCancel.addEventListener('click', closePinGate);
+
 let touchStartX = null;
 let touchStartY = null;
 
@@ -204,7 +299,7 @@ document.addEventListener('touchend', (e) => {
 
   const panelOpen = archivePanel.classList.contains('open');
   if (!panelOpen && touchStartX < 40 && dx > 70 && dy < 60) {
-    openArchive();
+    openPinGate();
   } else if (panelOpen && dx < -70 && dy < 60) {
     closeArchive();
   }

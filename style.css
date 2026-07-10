@@ -208,6 +208,91 @@ html, body {
   pointer-events: auto;
 }
 
+/* PIN-Schutz fürs Archiv */
+.pin-gate {
+  position: fixed;
+  inset: 0;
+  background: rgba(4,5,10,0.97);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 7;
+}
+.pin-gate[hidden] {
+  display: none;
+}
+.pin-gate__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+}
+.pin-gate__title {
+  font-size: 16px;
+  color: #f2f2f2;
+  margin: 0;
+}
+.pin-gate__error {
+  font-size: 13px;
+  color: #ff8a8a;
+  min-height: 16px;
+  margin: 0;
+}
+.pin-gate__dots {
+  display: flex;
+  gap: 16px;
+}
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: transparent;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.pin-dot.filled {
+  background: #f2f2f2;
+}
+.pin-gate__dots.shake {
+  animation: pinShake 0.4s ease;
+}
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.pin-gate__keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: 14px;
+  margin-top: 8px;
+}
+.pin-gate__keypad button {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: #f2f2f2;
+  font-size: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-gate__keypad button:active {
+  background: rgba(255,255,255,0.14);
+}
+.pin-gate__cancel,
+.pin-gate__del {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #999;
+}
+.pin-gate__del {
+  font-size: 20px;
+}
+
 /* manual text entry overlay */
 .text-entry {
   position: fixed;

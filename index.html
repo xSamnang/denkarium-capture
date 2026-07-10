@@ -44,6 +44,33 @@
     </div>
   </aside>
 
+  <div class="pin-gate" id="pinGate" hidden>
+    <div class="pin-gate__box">
+      <p class="pin-gate__title" id="pinTitle">PIN eingeben</p>
+      <p class="pin-gate__error" id="pinError"></p>
+      <div class="pin-gate__dots" id="pinDots">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <div class="pin-gate__keypad" id="pinKeypad">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <button type="button" class="pin-gate__cancel" id="pinCancel">Abbrechen</button>
+        <button type="button" data-key="0">0</button>
+        <button type="button" class="pin-gate__del" id="pinDelete">⌫</button>
+      </div>
+    </div>
+  </div>
+
   <div class="text-entry" id="textEntry" hidden>
     <div class="text-entry__box">
       <textarea id="textEntryInput" placeholder="Notiz eingeben …"></textarea>
