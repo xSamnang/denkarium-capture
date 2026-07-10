@@ -55,7 +55,7 @@ const RING_ENABLED_KEY = 'denkarium_ring_enabled';
 
 function isRingEnabled() {
   const v = localStorage.getItem(RING_ENABLED_KEY);
-  return v === null ? true : v === '1';
+  return v === null ? false : v === '1';
 }
 
 function applyRingEnabled() {
