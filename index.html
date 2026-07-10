@@ -25,8 +25,20 @@
   </main>
   <div class="live-caption" id="liveCaption" hidden></div>
 
-  <div class="cancel-trash" id="cancelTrash" hidden>🗑️</div>
-  <div class="lock-indicator" id="lockIndicator" hidden>🔒</div>
+  <div class="cancel-trash" id="cancelTrash" hidden aria-label="Zum Abbrechen hierher ziehen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  </div>
+  <div class="lock-indicator" id="lockIndicator" role="button" tabindex="0" aria-label="Aufnahme beenden (gesperrt)" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  </div>
 
   <button class="icon-btn icon-btn--pencil" id="pencilBtn" aria-label="Text eingeben">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -65,22 +77,43 @@
 
       <p class="settings-label">Farbe innen (Aufnahme-Kreis)</p>
       <div class="swatch-row" id="innerSwatches">
-        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
-        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
-        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
-        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
-        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
+        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz" aria-label="Schwarz"></button>
+        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß" aria-label="Weiß"></button>
+        <button class="swatch" data-color="warmgray" style="background:#78716c" title="Warmgrau" aria-label="Warmgrau"></button>
+        <button class="swatch" data-color="red" style="background:#ff5252" title="Rot" aria-label="Rot"></button>
+        <button class="swatch" data-color="orange" style="background:#ff9800" title="Orange" aria-label="Orange"></button>
+        <button class="swatch" data-color="yellow" style="background:#ffca28" title="Gelb" aria-label="Gelb"></button>
+        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün" aria-label="Grün"></button>
+        <button class="swatch" data-color="teal" style="background:#26c6da" title="Türkis" aria-label="Türkis"></button>
+        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau" aria-label="Hellblau"></button>
+        <button class="swatch" data-color="indigo" style="background:#5c6bc0" title="Indigo" aria-label="Indigo"></button>
+        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett" aria-label="Violett"></button>
+        <button class="swatch" data-color="pink" style="background:#ec407a" title="Pink" aria-label="Pink"></button>
       </div>
 
       <p class="settings-label">Hintergrund außen</p>
       <div class="swatch-row" id="outerSwatches">
-        <button class="swatch swatch--stars" data-color="starfield" title="Sternenhimmel (Standard)">✦</button>
-        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz"></button>
-        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß"></button>
-        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett"></button>
-        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün"></button>
-        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau"></button>
-        <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto">📷</button>
+        <button class="swatch swatch--stars" data-color="starfield" title="Sternenhimmel (Standard)" aria-label="Sternenhimmel (Standard)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3z"/></svg>
+        </button>
+        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz" aria-label="Schwarz"></button>
+        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß" aria-label="Weiß"></button>
+        <button class="swatch" data-color="warmgray" style="background:#78716c" title="Warmgrau" aria-label="Warmgrau"></button>
+        <button class="swatch" data-color="red" style="background:#ff5252" title="Rot" aria-label="Rot"></button>
+        <button class="swatch" data-color="orange" style="background:#ff9800" title="Orange" aria-label="Orange"></button>
+        <button class="swatch" data-color="yellow" style="background:#ffca28" title="Gelb" aria-label="Gelb"></button>
+        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün" aria-label="Grün"></button>
+        <button class="swatch" data-color="teal" style="background:#26c6da" title="Türkis" aria-label="Türkis"></button>
+        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau" aria-label="Hellblau"></button>
+        <button class="swatch" data-color="indigo" style="background:#5c6bc0" title="Indigo" aria-label="Indigo"></button>
+        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett" aria-label="Violett"></button>
+        <button class="swatch" data-color="pink" style="background:#ec407a" title="Pink" aria-label="Pink"></button>
+        <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto" aria-label="Eigenes Foto auswählen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+        </button>
       </div>
       <input type="file" id="bgPhotoInput" hidden accept="image/*" />
 
@@ -152,7 +185,12 @@
         <button type="button" data-key="9">9</button>
         <button type="button" class="pin-gate__cancel" id="pinCancel">Abbrechen</button>
         <button type="button" data-key="0">0</button>
-        <button type="button" class="pin-gate__del" id="pinDelete">⌫</button>
+        <button type="button" class="pin-gate__del" id="pinDelete" aria-label="Löschen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 6H8l-6 6 6 6h13a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z" />
+            <path d="M14 10l4 4M18 10l-4 4" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>

@@ -223,6 +223,12 @@ recordButton.addEventListener('pointerdown', onRecordPointerDown);
 lockIndicator.addEventListener('click', () => {
   if (recording && locked) stopRecording();
 });
+lockIndicator.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && recording && locked) {
+    e.preventDefault();
+    stopRecording();
+  }
+});
 
 idleLoop(performance.now());
 

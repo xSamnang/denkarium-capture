@@ -12,9 +12,16 @@ const DEFAULT_UI_ACCENT = '#1a1a1a';
 const SWATCH_COLORS = {
   black: '#000000',
   white: '#ffffff',
-  violet: '#7c4dff',
+  warmgray: '#78716c',
+  red: '#ff5252',
+  orange: '#ff9800',
+  yellow: '#ffca28',
   green: '#2ecc71',
+  teal: '#26c6da',
   lightblue: '#4fc3f7',
+  indigo: '#5c6bc0',
+  violet: '#7c4dff',
+  pink: '#ec407a',
 };
 
 function defaultPreset() {
