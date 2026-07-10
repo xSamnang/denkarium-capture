@@ -7,6 +7,7 @@ const THEME_MODE_KEY = 'denkarium_theme_mode';
 const ACTIVE_PRESET_KEY = 'denkarium_active_preset';
 const PRESETS_KEY = 'denkarium_custom_presets';
 const DEFAULT_RING_COLOR = '#ff9a3c';
+const DEFAULT_UI_ACCENT = '#1a1a1a';
 
 const SWATCH_COLORS = {
   black: '#000000',
@@ -17,7 +18,7 @@ const SWATCH_COLORS = {
 };
 
 function defaultPreset() {
-  return { inner: 'black', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR };
+  return { inner: 'black', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR, uiAccent: DEFAULT_UI_ACCENT };
 }
 
 function loadPresets() {
@@ -47,9 +48,24 @@ const innerSwatches = document.getElementById('innerSwatches');
 const outerSwatches = document.getElementById('outerSwatches');
 const bgPhotoInput = document.getElementById('bgPhotoInput');
 const ringColorInput = document.getElementById('ringColorInput');
+const uiAccentInput = document.getElementById('uiAccentInput');
 
 function setRingColor(hex) {
   document.documentElement.style.setProperty('--ring-color', hex);
+}
+
+function contrastingTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#111111' : '#ffffff';
+}
+
+function setUiAccent(hex) {
+  document.documentElement.style.setProperty('--ui-accent', hex);
+  document.documentElement.style.setProperty('--ui-accent-fg', contrastingTextColor(hex));
 }
 
 function setInnerColor(colorKey) {
@@ -101,15 +117,18 @@ function applyTheme() {
     setInnerColor('black');
     setOuterBackground('white', null);
     setRingColor(DEFAULT_RING_COLOR);
+    setUiAccent('#222222');
   } else if (mode === 'dark') {
     setInnerColor('white');
     setOuterBackground('black', null);
     setRingColor(DEFAULT_RING_COLOR);
+    setUiAccent('#ffffff');
   } else {
     const preset = presets[activePresetIndex] || defaultPreset();
     setInnerColor(preset.inner);
     setOuterBackground(preset.outer, preset.outerPhoto);
     setRingColor(preset.ring || DEFAULT_RING_COLOR);
+    setUiAccent(preset.uiAccent || DEFAULT_UI_ACCENT);
   }
 
   themeSwitcher.querySelectorAll('button').forEach((btn) => {
@@ -120,6 +139,7 @@ function applyTheme() {
   markSelectedSwatch(innerSwatches, activePreset.inner);
   markSelectedSwatch(outerSwatches, activePreset.outer);
   ringColorInput.value = activePreset.ring || DEFAULT_RING_COLOR;
+  uiAccentInput.value = activePreset.uiAccent || DEFAULT_UI_ACCENT;
   markActivePresetButton();
 }
 
@@ -208,6 +228,13 @@ bgPhotoInput.addEventListener('change', async () => {
 
 ringColorInput.addEventListener('input', () => {
   presets[activePresetIndex].ring = ringColorInput.value;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
+});
+
+uiAccentInput.addEventListener('input', () => {
+  presets[activePresetIndex].uiAccent = uiAccentInput.value;
   savePresets();
   switchToCustomMode();
   applyTheme();

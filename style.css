@@ -1,6 +1,8 @@
 :root {
   color-scheme: dark;
   --ring-color: #ff9a3c;
+  --ui-accent: #1a1a1a;
+  --ui-accent-fg: #ffffff;
 }
 
 * {
@@ -79,8 +81,8 @@ html, body {
     color-mix(in srgb, var(--ring-color) 25%, white) 280deg,
     color-mix(in srgb, var(--ring-color) 75%, black) 320deg,
     var(--ring-color) 360deg);
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
-  mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 61%, black 62%, black 76%, transparent 77%);
+  mask-image: radial-gradient(circle closest-side, transparent 61%, black 62%, black 76%, transparent 77%);
   opacity: 0.95;
   animation: spin 3.5s linear infinite;
   pointer-events: none;
@@ -115,16 +117,17 @@ html, body {
   transform: translateX(-50%);
   display: flex;
   gap: 2px;
-  background: rgba(20,20,26,0.85);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: color-mix(in srgb, var(--ui-accent) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-accent-fg) 25%, transparent);
   border-radius: 999px;
   padding: 3px;
   z-index: 2;
+  transition: background 0.2s ease;
 }
 .theme-switcher button {
   border: none;
   background: transparent;
-  color: #ccc;
+  color: var(--ui-accent-fg);
   font-size: 12px;
   padding: 7px 14px;
   border-radius: 999px;
@@ -132,8 +135,8 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 .theme-switcher button.active {
-  background: #ffffff;
-  color: #111;
+  background: var(--ui-accent-fg);
+  color: var(--ui-accent);
 }
 
 .live-caption {
@@ -168,9 +171,9 @@ html, body {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(20,20,26,0.85);
-  color: #e8e8ea;
+  border: 1px solid color-mix(in srgb, var(--ui-accent-fg) 20%, transparent);
+  background: color-mix(in srgb, var(--ui-accent) 50%, transparent);
+  color: var(--ui-accent-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,7 +184,7 @@ html, body {
 }
 .icon-btn:active {
   transform: scale(0.92);
-  background: rgba(20,20,26,0.95);
+  background: color-mix(in srgb, var(--ui-accent) 65%, transparent);
 }
 .icon-btn svg {
   width: 20px;
