@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Pensieve-Button Vorschau</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  }
+
+  .rim {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.55), 0 0 55px rgba(60,220,185,0.1);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .rim.pressed {
+    transform: scale(0.96);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 80px rgba(60,220,185,0.28);
+  }
+
+  .basin {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 42%, #4de3e0 0%, #29b8bf 40%, #1c98a5 70%, #167c8c 100%);
+    overflow: hidden;
+  }
+
+  /* sphere shading: light source upper-left, darker toward the lower-right and all edges */
+  .shade-dark {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 66% 72%, rgba(0,0,0,0.12), transparent 55%),
+      radial-gradient(circle at 50% 50%, transparent 74%, rgba(0,0,0,0.2) 100%);
+  }
+
+  /* glossy specular highlight + thin glowing rim light, like a lit orb */
+  .shade-light {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    background:
+      radial-gradient(circle at 30% 24%, rgba(255,255,255,0.65), transparent 34%),
+      radial-gradient(circle at 50% 50%, transparent 86%, rgba(170,245,255,0.5) 97%, transparent 100%);
+  }
+
+  /* physically-lit ripple highlights, layered on top for realism */
+  .water-light {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: #000;
+    filter: url(#waterLight);
+    mix-blend-mode: soft-light;
+    opacity: 0.55;
+  }
+
+  .liquid-wrap {
+    position: absolute;
+    inset: 0;
+    filter: url(#liquid);
+  }
+
+  .tilt {
+    position: absolute;
+    inset: 0;
+  }
+  .tilt-2 { transform: rotate(35deg); }
+  .tilt-3 { transform: rotate(-24deg); }
+  .tilt-6 { transform: rotate(70deg); }
+
+  .mist {
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    top: -25%;
+    left: -25%;
+    filter: blur(8px);
+  }
+
+  /* bright glowing accents, like light catching the swirling surface */
+  .mist-1 {
+    background: radial-gradient(circle at 28% 30%,
+      rgba(215,250,255,0.85) 0%,
+      rgba(140,230,255,0.35) 14%,
+      transparent 30%);
+    mix-blend-mode: screen;
+    animation: swirl 16s linear infinite;
+  }
+  .mist-4 {
+    background: radial-gradient(circle at 60% 28%,
+      rgba(255,255,255,0.5) 0%,
+      rgba(130,220,250,0.2) 10%,
+      transparent 22%);
+    filter: blur(6px);
+    mix-blend-mode: screen;
+    animation: swirl 27s linear infinite reverse;
+  }
+
+  /* dark storm-cloud swirls overlaid on the glowing green, covering most of the surface */
+  .mist-2 {
+    background: radial-gradient(ellipse 32% 62% at 58% 52%,
+      rgba(20,90,98,0.22) 0%,
+      rgba(24,100,108,0.1) 55%,
+      transparent 82%);
+    mix-blend-mode: multiply;
+    animation: swirl 22s linear infinite reverse;
+  }
+  .mist-3 {
+    background: radial-gradient(ellipse 30% 58% at 40% 64%,
+      rgba(20,92,100,0.2) 0%,
+      rgba(24,102,110,0.09) 55%,
+      transparent 82%);
+    filter: blur(9px);
+    mix-blend-mode: multiply;
+    animation: swirl 11s linear infinite;
+  }
+  .mist-5 {
+    background: radial-gradient(ellipse 26% 50% at 32% 40%,
+      rgba(20,90,98,0.16) 0%,
+      rgba(24,96,104,0.08) 55%,
+      transparent 80%);
+    mix-blend-mode: multiply;
+    animation: swirl 19s linear infinite;
+  }
+  .mist-6 {
+    background: radial-gradient(ellipse 24% 46% at 68% 38%,
+      rgba(20,92,100,0.15) 0%,
+      rgba(24,96,104,0.07) 55%,
+      transparent 80%);
+    filter: blur(9px);
+    mix-blend-mode: multiply;
+    animation: swirl 14s linear infinite reverse;
+  }
+  .mist-7 {
+    background: radial-gradient(circle at 45% 55%,
+      rgba(255,255,255,0.4) 0%,
+      rgba(180,250,255,0.15) 8%,
+      transparent 18%);
+    filter: blur(4px);
+    mix-blend-mode: screen;
+    animation: swirl 13s linear infinite;
+  }
+
+  @keyframes swirl {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .label {
+    position: fixed;
+    bottom: 64px;
+    color: #888;
+    font-size: 13px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .status {
+    position: fixed;
+    bottom: 40px;
+    color: #6ab0ff;
+    font-size: 12px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .debug {
+    position: fixed;
+    bottom: 8px;
+    color: #555;
+    font-size: 11px;
+    text-align: center;
+    width: 100%;
+  }
+  .debug input { vertical-align: middle; }
+</style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <filter id="liquid" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.017" numOctaves="3" seed="7" result="turb"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="turb" scale="34" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+
+    <!-- simulated rippling water surface: bump-mapped turbulence lit by a virtual light source -->
+    <filter id="waterLight" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.03" numOctaves="2" seed="4" result="ripple" />
+      <feGaussianBlur in="ripple" stdDeviation="3.5" result="rippleBlur" />
+      <feSpecularLighting in="rippleBlur" surfaceScale="1.8" specularConstant="0.6" specularExponent="8" lighting-color="#8fe0e6" result="spec">
+        <fePointLight x="95" y="70" z="170">
+          <animate attributeName="x" values="75;115;75" dur="7s" repeatCount="indefinite" />
+          <animate attributeName="y" values="55;90;55" dur="9s" repeatCount="indefinite" />
+        </fePointLight>
+      </feSpecularLighting>
+      <feComposite in="spec" in2="SourceGraphic" operator="in" />
+    </filter>
+  </svg>
+
+  <div class="rim" id="rim">
+    <div class="basin">
+      <div class="liquid-wrap">
+        <div class="mist mist-1"></div>
+        <div class="tilt tilt-2"><div class="mist mist-2"></div></div>
+        <div class="tilt tilt-3"><div class="mist mist-3"></div></div>
+        <div class="mist mist-4"></div>
+        <div class="mist mist-5"></div>
+        <div class="tilt tilt-6"><div class="mist mist-6"></div></div>
+        <div class="mist mist-7"></div>
+      </div>
+    </div>
+    <div class="shade-dark"></div>
+    <div class="shade-light"></div>
+    <div class="water-light"></div>
+  </div>
+  <div class="label">Live-Prototyp – nur zur Design-Abstimmung, noch nicht im echten App-Grundgerüst</div>
+  <div class="status" id="status">Bereit – gedrückt halten zum Aufnehmen</div>
+  <div class="debug">Test ohne Mikrofon: <input type="range" id="volTest" min="0" max="100" value="0"></div>
+
+  <script>
+    const rim = document.getElementById('rim');
+    const statusEl = document.getElementById('status');
+    const turb = document.querySelector('feTurbulence');
+    const mists = [...document.querySelectorAll('.mist')];
+    const baseDurations = [10, 13, 8, 15, 11, 9, 8]; // seconds, matches CSS defaults
+
+    let rafId = null;
+    let audioCtx, analyser, dataArray, source, stream;
+    let recording = false;
+    let manualVolume = 0; // from debug slider, used when not recording
+
+    function setSwirlSpeed(factor) {
+      mists.forEach((el, i) => {
+        el.style.animationDuration = (baseDurations[i] * factor) + 's';
+      });
+    }
+
+    function applyVolume(volume01) {
+      const clamped = Math.max(0, Math.min(1, volume01));
+      const factor = Math.max(0.15, 1 - clamped * 0.85);
+      setSwirlSpeed(factor);
+      const freq = 0.008 + clamped * 0.022;
+      turb.setAttribute('baseFrequency', `${freq} ${freq * 2.1}`);
+    }
+
+    function idleLoop(t) {
+      if (!recording) {
+        const breathing = manualVolume > 0 ? manualVolume : (Math.sin(t / 1800) * 0.5 + 0.5) * 0.12;
+        applyVolume(breathing);
+      }
+      rafId = requestAnimationFrame(idleLoop);
+    }
+
+    function recordingTick() {
+      if (!recording) return;
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      const avg = sum / dataArray.length / 255;
+      applyVolume(avg);
+      rafId = requestAnimationFrame(recordingTick);
+    }
+
+    async function startRecording() {
+      rim.classList.add('pressed');
+      recording = true;
+      statusEl.textContent = 'Aufnahme läuft …';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        cancelAnimationFrame(rafId);
+        recordingTick();
+      } catch (err) {
+        statusEl.textContent = 'Kein Mikrofon verfügbar – nutze den Test-Regler unten';
+        console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
+      }
+    }
+
+    function stopRecording() {
+      rim.classList.remove('pressed');
+      recording = false;
+      statusEl.textContent = 'Bereit – gedrückt halten zum Aufnehmen';
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+      cancelAnimationFrame(rafId);
+      idleLoop(performance.now());
+    }
+
+    rim.addEventListener('pointerdown', startRecording);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => rim.addEventListener(evt, stopRecording));
+
+    document.getElementById('volTest').addEventListener('input', (e) => {
+      manualVolume = Number(e.target.value) / 100;
+    });
+
+    idleLoop(performance.now());
+  </script>
+</body>
+</html>
