@@ -55,23 +55,23 @@ html, body {
   align-items: center;
   justify-content: center;
   z-index: 1;
+  /* one shared size basis so the button and the halo around it always
+     scale together and never overflow a narrow portrait screen */
+  --btn-size: min(320px, 56vw, 46vh);
 }
 
 .lens-halo {
   position: absolute;
-  width: 560px;
-  height: 560px;
-  max-width: 150vw;
-  max-height: 150vw;
+  width: calc(var(--btn-size) * 1.6);
+  height: calc(var(--btn-size) * 1.6);
   border-radius: 50%;
   background: conic-gradient(from 0deg,
-    #cfe3ff 0deg, #ffffff 35deg, #e8c9a0 70deg, #e0956b 100deg,
-    #a3493c 130deg, #7a3a45 150deg, #9a5a55 170deg,
-    #cfe3ff 210deg, #ffffff 250deg, #dce8ff 280deg, #e8c9a0 320deg, #cfe3ff 360deg);
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent 56%, black 62%, black 80%, transparent 92%);
-  mask-image: radial-gradient(circle closest-side, transparent 56%, black 62%, black 80%, transparent 92%);
-  filter: blur(6px);
-  opacity: 0.85;
+    #ff9a3c 0deg, #ffffff 35deg, #ffb35c 70deg, #ff7a2e 100deg,
+    #ff5a1f 130deg, #ffd8a8 150deg, #ff8c3d 170deg,
+    #ffffff 210deg, #ff9a3c 250deg, #ffe3bf 280deg, #ff7a2e 320deg, #ff9a3c 360deg);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
+  mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
+  opacity: 0.95;
   animation: spin 34s linear infinite;
   pointer-events: none;
 }
@@ -83,10 +83,8 @@ html, body {
 
 .record-button {
   position: relative;
-  width: 320px;
-  height: 320px;
-  max-width: 78vw;
-  max-height: 78vw;
+  width: var(--btn-size);
+  height: var(--btn-size);
   border-radius: 50%;
   background: #000;
   border: none;
