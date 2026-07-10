@@ -2,7 +2,7 @@
 const recordButton = document.getElementById('recordButton');
 const lensHalo = document.getElementById('lensHalo');
 const liveCaption = document.getElementById('liveCaption');
-const baseRingDuration = 34;
+const baseRingDuration = 3.5;
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;

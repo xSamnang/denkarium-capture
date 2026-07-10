@@ -57,13 +57,13 @@ html, body {
   z-index: 1;
   /* one shared size basis so the button and the halo around it always
      scale together and never overflow a narrow portrait screen */
-  --btn-size: min(320px, 56vw, 46vh);
+  --btn-size: min(320px, 52vw, 44vh);
 }
 
 .lens-halo {
   position: absolute;
-  width: calc(var(--btn-size) * 1.6);
-  height: calc(var(--btn-size) * 1.6);
+  width: calc(var(--btn-size) * 1.45);
+  height: calc(var(--btn-size) * 1.45);
   border-radius: 50%;
   background: conic-gradient(from 0deg,
     #ff9a3c 0deg, #ffffff 35deg, #ffb35c 70deg, #ff7a2e 100deg,
@@ -72,7 +72,7 @@ html, body {
   -webkit-mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
   mask-image: radial-gradient(circle closest-side, transparent 59%, black 60%, black 78%, transparent 79%);
   opacity: 0.95;
-  animation: spin 34s linear infinite;
+  animation: spin 3.5s linear infinite;
   pointer-events: none;
 }
 
