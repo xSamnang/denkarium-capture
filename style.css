@@ -100,6 +100,23 @@ html, body {
   transform: scale(0.96);
 }
 
+.live-caption {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(85vw, 480px);
+  text-align: center;
+  color: rgba(242,242,242,0.85);
+  font-size: 15px;
+  line-height: 1.4;
+  z-index: 2;
+  pointer-events: none;
+}
+.live-caption[hidden] {
+  display: none;
+}
+
 /* corner icon buttons */
 .icon-btn {
   position: fixed;

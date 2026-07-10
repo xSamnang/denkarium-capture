@@ -1,11 +1,52 @@
 // --- Aufnahme-Button: Druck-Feedback + lautstärke-reaktiver Lichtring ---
 const recordButton = document.getElementById('recordButton');
 const lensHalo = document.getElementById('lensHalo');
+const liveCaption = document.getElementById('liveCaption');
 const baseRingDuration = 34;
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;
 let recording = false;
+
+// --- Sprach-zu-Text (Web Speech API) ---
+const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let finalTranscript = '';
+let recognitionShouldRun = false;
+
+if (SpeechRecognitionImpl) {
+  recognition = new SpeechRecognitionImpl();
+  recognition.lang = 'de-DE';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.addEventListener('result', (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const chunk = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += chunk + ' ';
+      } else {
+        interim += chunk;
+      }
+    }
+    liveCaption.textContent = (finalTranscript + interim).trim();
+  });
+
+  recognition.addEventListener('error', (event) => {
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      showToast('Mikrofon-Zugriff für Spracherkennung verweigert');
+    }
+  });
+
+  // manche Browser beenden die Erkennung nach kurzer Sprechpause von sich aus -
+  // solange noch aufgenommen wird, einfach neu starten
+  recognition.addEventListener('end', () => {
+    if (recognitionShouldRun) {
+      try { recognition.start(); } catch (e) { /* already running */ }
+    }
+  });
+}
 
 function applyVolume(volume01) {
   const clamped = Math.max(0, Math.min(1, volume01));
@@ -34,6 +75,17 @@ function recordingTick() {
 async function startRecording() {
   recordButton.classList.add('pressed');
   recording = true;
+
+  finalTranscript = '';
+  liveCaption.textContent = '';
+  liveCaption.hidden = false;
+  if (recognition) {
+    recognitionShouldRun = true;
+    try { recognition.start(); } catch (e) { /* already running */ }
+  } else {
+    liveCaption.textContent = 'Spracherkennung wird von diesem Browser nicht unterstützt – Text manuell eingeben.';
+  }
+
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -52,10 +104,19 @@ async function startRecording() {
 function stopRecording() {
   recordButton.classList.remove('pressed');
   recording = false;
+  liveCaption.hidden = true;
+
+  if (recognition) {
+    recognitionShouldRun = false;
+    recognition.stop();
+  }
+
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
   if (audioCtx) { audioCtx.close(); audioCtx = null; }
   cancelAnimationFrame(rafId);
   idleLoop(performance.now());
+
+  openTextEntry(finalTranscript.trim());
 }
 
 recordButton.addEventListener('pointerdown', startRecording);
@@ -82,11 +143,13 @@ const textEntryInput = document.getElementById('textEntryInput');
 const textEntryCancel = document.getElementById('textEntryCancel');
 const textEntrySave = document.getElementById('textEntrySave');
 
-pencilBtn.addEventListener('click', () => {
+function openTextEntry(prefillText) {
   textEntry.hidden = false;
-  textEntryInput.value = '';
+  textEntryInput.value = prefillText || '';
   textEntryInput.focus();
-});
+}
+
+pencilBtn.addEventListener('click', () => openTextEntry(''));
 textEntryCancel.addEventListener('click', () => { textEntry.hidden = true; });
 textEntrySave.addEventListener('click', () => {
   textEntry.hidden = true;
