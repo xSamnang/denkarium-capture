@@ -19,6 +19,7 @@ const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRec
 let recognition = null;
 let finalTranscript = '';
 let recognitionShouldRun = false;
+let recognitionErrorMessage = null;
 
 if (SpeechRecognitionImpl) {
   recognition = new SpeechRecognitionImpl();
@@ -39,16 +40,35 @@ if (SpeechRecognitionImpl) {
     liveCaption.textContent = (finalTranscript + interim).trim();
   });
 
+  // Fehler, die sich durch einen Neustart nicht von selbst lösen - dauerhaftes
+  // erneutes Versuchen würde nur eine Endlosschleife aus Fehlversuchen erzeugen
+  const FATAL_RECOGNITION_ERRORS = new Set(['not-allowed', 'service-not-allowed', 'audio-capture', 'language-not-supported']);
+
   recognition.addEventListener('error', (event) => {
-    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-      showToast('Mikrofon-Zugriff für Spracherkennung verweigert');
+    console.warn('Spracherkennung-Fehler:', event.error);
+    if (FATAL_RECOGNITION_ERRORS.has(event.error)) {
+      recognitionShouldRun = false; // nicht automatisch neu versuchen
     }
+    const messages = {
+      'not-allowed': 'Mikrofon-Zugriff für Spracherkennung verweigert',
+      'service-not-allowed': 'Mikrofon-Zugriff für Spracherkennung verweigert',
+      'audio-capture': 'Kein Mikrofon gefunden',
+      'network': 'Keine Verbindung zum Spracherkennungs-Dienst (Internet prüfen)',
+      'no-speech': 'Keine Sprache erkannt – bitte näher am Mikrofon sprechen',
+      'language-not-supported': 'Sprache "Deutsch" wird nicht unterstützt',
+    };
+    // 'aborted' passiert normal, wenn wir selbst stop() aufrufen - keine Meldung nötig
+    if (event.error === 'aborted') return;
+    const message = messages[event.error] || `Spracherkennung-Fehler: ${event.error}`;
+    recognitionErrorMessage = message; // merken, damit "Nichts erkannt" das nicht überschreibt
+    showToast(message);
   });
 
   // manche Browser beenden die Erkennung nach kurzer Sprechpause von sich aus -
   // solange noch aufgenommen wird, einfach neu starten. Wurde bewusst gestoppt
-  // (Loslassen/Abbrechen), war das der Startschuss, um den finalen Text zu
-  // übernehmen - das letzte Ergebnis kommt sonst erst nach dem Loslassen an.
+  // (Loslassen/Abbrechen) oder trat ein dauerhafter Fehler auf, war das der
+  // Startschuss, um den finalen Text zu übernehmen - das letzte Ergebnis kommt
+  // sonst erst nach dem Loslassen an.
   recognition.addEventListener('end', () => {
     if (recognitionShouldRun) {
       try { recognition.start(); } catch (e) { /* already running */ }
@@ -69,7 +89,10 @@ async function finishPendingStop() {
     const text = finalTranscript.trim();
     if (text) {
       await saveTranscriptDirectly(text);
-    } else {
+    } else if (!recognitionErrorMessage) {
+      // nur zeigen, wenn kein spezifischerer Fehler (Mikrofon/Netzwerk/...)
+      // bereits erklärt hat, warum nichts ankam - sonst würde diese
+      // generische Meldung die hilfreichere überschreiben
       showToast('Nichts erkannt – bitte erneut versuchen');
     }
   } else if (action === 'cancel') {
@@ -140,11 +163,19 @@ async function startRecording() {
   recording = true;
 
   finalTranscript = '';
+  recognitionErrorMessage = null;
   liveCaption.textContent = '';
   liveCaption.hidden = false;
   if (recognition) {
     recognitionShouldRun = true;
-    try { recognition.start(); } catch (e) { /* already running */ }
+    try {
+      recognition.start();
+    } catch (e) {
+      if (e.name !== 'InvalidStateError') {
+        console.warn('Spracherkennung konnte nicht gestartet werden:', e);
+        showToast('Spracherkennung konnte nicht gestartet werden');
+      }
+    }
   } else {
     liveCaption.textContent = 'Spracherkennung wird von diesem Browser nicht unterstützt – Text manuell eingeben.';
   }
