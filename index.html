@@ -7,16 +7,27 @@
   <meta name="theme-color" content="#000000" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="space"></div>
   <div class="dust"></div>
 
-  <div class="theme-switcher" id="themeSwitcher">
-    <button type="button" data-mode="light">Hell</button>
-    <button type="button" data-mode="dark">Dunkel</button>
-    <button type="button" data-mode="custom">Custom</button>
+  <!-- Projekt-Umschalter (oben Mitte) -->
+  <div class="project-switcher chrome chrome--top" id="projectSwitcher">
+    <button class="project-pill" id="projectPill" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      </svg>
+      <span class="project-pill__name" id="projectPillName">Inbox</span>
+      <svg class="project-pill__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+    <div class="project-menu" id="projectMenu" role="listbox" hidden></div>
   </div>
 
   <main class="stage">
@@ -40,125 +51,210 @@
     </svg>
   </div>
 
-  <button class="icon-btn icon-btn--pencil" id="pencilBtn" aria-label="Text eingeben">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  </button>
+  <!-- Darstellung (unten links) -->
+  <div class="theme-switcher chrome chrome--bl" id="themeSwitcher">
+    <button type="button" data-mode="light">Hell</button>
+    <button type="button" data-mode="dark">Dunkel</button>
+    <button type="button" data-mode="custom">Custom</button>
+  </div>
 
-  <button class="icon-btn icon-btn--paperclip" id="paperclipBtn" aria-label="Datei anhängen">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
-  </button>
+  <!-- Erstellen (unten rechts): + mit Schnellmenü -->
+  <div class="fab-wrap chrome chrome--br" id="fabWrap">
+    <div class="speed-dial" id="speedDial" hidden>
+      <button class="dial-option" id="dialNote" type="button">
+        <span class="dial-label">Notiz schreiben</span>
+        <span class="dial-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        </span>
+      </button>
+      <button class="dial-option" id="dialFile" type="button">
+        <span class="dial-label">Datei hochladen</span>
+        <span class="dial-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+          </svg>
+        </span>
+      </button>
+    </div>
+    <button class="fab" id="fabBtn" type="button" aria-label="Neu erstellen" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </button>
+  </div>
   <input type="file" id="fileInput" hidden accept="image/*,application/pdf,.doc,.docx,.txt" />
 
   <div class="menu-backdrop" id="menuBackdrop"></div>
   <aside class="menu-sheet" id="menuSheet" aria-hidden="true">
     <div class="menu-sheet__handle"></div>
-    <button class="menu-sheet__close" id="menuClose" aria-label="Schließen">✕</button>
+    <button class="menu-sheet__close" id="menuClose" aria-label="Schließen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
 
-    <div class="menu-tabs" id="menuTabs">
-      <button type="button" class="menu-tab active" data-tab="settings">Einstellungen</button>
-      <button type="button" class="menu-tab" data-tab="recent">Letzte Einträge</button>
-      <button type="button" class="menu-tab" data-tab="guide">Anleitung</button>
-    </div>
+    <nav class="menu-tabs" id="menuTabs">
+      <button type="button" class="menu-tab active" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        <span>Einstellungen</span>
+      </button>
+      <button type="button" class="menu-tab" data-tab="recent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+        <span>Letzte Einträge</span>
+      </button>
+      <button type="button" class="menu-tab" data-tab="guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+        <span>Anleitung</span>
+      </button>
+    </nav>
 
     <div class="menu-panel" data-panel="settings">
-      <h3 class="menu-section-title">Darstellung</h3>
-
-      <p class="settings-label">Custom-Presets</p>
-      <div class="preset-row" id="presetRow">
-        <button class="preset-btn" data-preset="0" type="button">1</button>
-        <button class="preset-btn" data-preset="1" type="button">2</button>
-        <button class="preset-btn" data-preset="2" type="button">3</button>
-      </div>
-
-      <p class="settings-label">Farbe innen (Aufnahme-Kreis)</p>
-      <div class="swatch-row" id="innerSwatches">
-        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz" aria-label="Schwarz"></button>
-        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß" aria-label="Weiß"></button>
-        <button class="swatch" data-color="warmgray" style="background:#78716c" title="Warmgrau" aria-label="Warmgrau"></button>
-        <button class="swatch" data-color="red" style="background:#ff5252" title="Rot" aria-label="Rot"></button>
-        <button class="swatch" data-color="orange" style="background:#ff9800" title="Orange" aria-label="Orange"></button>
-        <button class="swatch" data-color="yellow" style="background:#ffca28" title="Gelb" aria-label="Gelb"></button>
-        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün" aria-label="Grün"></button>
-        <button class="swatch" data-color="teal" style="background:#26c6da" title="Türkis" aria-label="Türkis"></button>
-        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau" aria-label="Hellblau"></button>
-        <button class="swatch" data-color="indigo" style="background:#5c6bc0" title="Indigo" aria-label="Indigo"></button>
-        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett" aria-label="Violett"></button>
-        <button class="swatch" data-color="pink" style="background:#ec407a" title="Pink" aria-label="Pink"></button>
-      </div>
-
-      <p class="settings-label">Hintergrund außen</p>
-      <div class="swatch-row" id="outerSwatches">
-        <button class="swatch swatch--stars" data-color="starfield" title="Sternenhimmel (Standard)" aria-label="Sternenhimmel (Standard)">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3z"/></svg>
-        </button>
-        <button class="swatch" data-color="black" style="background:#000000" title="Schwarz" aria-label="Schwarz"></button>
-        <button class="swatch" data-color="white" style="background:#ffffff" title="Weiß" aria-label="Weiß"></button>
-        <button class="swatch" data-color="warmgray" style="background:#78716c" title="Warmgrau" aria-label="Warmgrau"></button>
-        <button class="swatch" data-color="red" style="background:#ff5252" title="Rot" aria-label="Rot"></button>
-        <button class="swatch" data-color="orange" style="background:#ff9800" title="Orange" aria-label="Orange"></button>
-        <button class="swatch" data-color="yellow" style="background:#ffca28" title="Gelb" aria-label="Gelb"></button>
-        <button class="swatch" data-color="green" style="background:#2ecc71" title="Grün" aria-label="Grün"></button>
-        <button class="swatch" data-color="teal" style="background:#26c6da" title="Türkis" aria-label="Türkis"></button>
-        <button class="swatch" data-color="lightblue" style="background:#4fc3f7" title="Hellblau" aria-label="Hellblau"></button>
-        <button class="swatch" data-color="indigo" style="background:#5c6bc0" title="Indigo" aria-label="Indigo"></button>
-        <button class="swatch" data-color="violet" style="background:#7c4dff" title="Violett" aria-label="Violett"></button>
-        <button class="swatch" data-color="pink" style="background:#ec407a" title="Pink" aria-label="Pink"></button>
-        <button class="swatch swatch--photo" data-color="photo" title="Eigenes Foto" aria-label="Eigenes Foto auswählen">
+      <section class="settings-card">
+        <h3 class="settings-card__title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
-            <circle cx="12" cy="13" r="3.5" />
+            <circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" />
+            <circle cx="8.5" cy="7.5" r="1" /><circle cx="6.5" cy="12.5" r="1" />
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.4-.15-.75-.4-1-.24-.26-.4-.62-.4-1a1.5 1.5 0 0 1 1.5-1.5H16a6 6 0 0 0 6-6c0-4.97-4.5-9-10-9z" />
           </svg>
-        </button>
-      </div>
-      <input type="file" id="bgPhotoInput" hidden accept="image/*" />
+          Darstellung
+        </h3>
 
-      <p class="settings-label">Ring-Akzentfarbe</p>
-      <input type="color" id="ringColorInput" class="ring-color-input" value="#ff9a3c" />
+        <p class="settings-label">Custom-Presets</p>
+        <div class="preset-row" id="presetRow">
+          <button class="preset-btn" data-preset="0" type="button">1</button>
+          <button class="preset-btn" data-preset="1" type="button">2</button>
+          <button class="preset-btn" data-preset="2" type="button">3</button>
+        </div>
 
-      <p class="settings-label">Akzentfarbe Buttons &amp; Umschalter</p>
-      <input type="color" id="uiAccentInput" class="ring-color-input" value="#1a1a1a" />
+        <p class="settings-label">Farbe anpassen für</p>
+        <div class="chip-row" id="colorTargets">
+          <button type="button" class="chip active" data-target="inner"><span class="chip-dot" data-dot="inner"></span>Kreis</button>
+          <button type="button" class="chip" data-target="outer"><span class="chip-dot" data-dot="outer"></span>Hintergrund</button>
+          <button type="button" class="chip" data-target="ring"><span class="chip-dot" data-dot="ring"></span>Ring</button>
+          <button type="button" class="chip" data-target="ui"><span class="chip-dot" data-dot="ui"></span>Buttons</button>
+        </div>
 
-      <p class="settings-label">Ring</p>
-      <label class="toggle-row">
-        <span>Ring anzeigen</span>
-        <input type="checkbox" id="ringToggle" />
-        <span class="toggle-switch"></span>
-      </label>
+        <div class="wheel-wrap">
+          <div class="color-wheel" id="colorWheel" aria-label="Farbrad">
+            <div class="wheel-cursor" id="wheelCursor" hidden></div>
+          </div>
+          <div class="wheel-side">
+            <div class="neutral-chips" id="neutralChips">
+              <button type="button" class="swatch swatch--sm" data-hex="#000000" style="background:#000" aria-label="Schwarz"></button>
+              <button type="button" class="swatch swatch--sm" data-hex="#71717a" style="background:#71717a" aria-label="Grau"></button>
+              <button type="button" class="swatch swatch--sm" data-hex="#ffffff" style="background:#fff" aria-label="Weiß"></button>
+            </div>
+            <div class="special-chips" id="outerSpecials" hidden>
+              <button type="button" class="chip" data-mode="starfield">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3z"/></svg>
+                Sterne
+              </button>
+              <button type="button" class="chip" data-mode="photo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+                Foto
+              </button>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="bgPhotoInput" hidden accept="image/*" />
 
-      <h3 class="menu-section-title">Speicher</h3>
-      <button class="drive-settings-btn" id="driveReconnectBtn" type="button">Google-Drive-Ordner ändern</button>
+        <label class="toggle-row">
+          <span>Ring anzeigen</span>
+          <input type="checkbox" id="ringToggle" />
+          <span class="toggle-switch"></span>
+        </label>
+      </section>
+
+      <section class="settings-card">
+        <h3 class="settings-card__title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          </svg>
+          Projekte
+        </h3>
+        <p class="settings-hint">Jedes Projekt speichert in seinen eigenen Google-Drive-Ordner.</p>
+        <div class="project-list" id="projectList"></div>
+        <button class="ghost-btn" id="addProjectBtn" type="button">+ Neues Projekt</button>
+      </section>
+
+      <section class="settings-card">
+        <h3 class="settings-card__title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+            <path d="M12 18v4" />
+          </svg>
+          Aufnahme
+        </h3>
+        <label class="toggle-row">
+          <span>Vibration beim Start</span>
+          <input type="checkbox" id="vibrationToggle" checked />
+          <span class="toggle-switch"></span>
+        </label>
+      </section>
+
+      <section class="settings-card">
+        <h3 class="settings-card__title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Sicherheit
+        </h3>
+        <p class="settings-hint">Die PIN schützt nur den Bereich „Letzte Einträge“.</p>
+        <button class="ghost-btn" id="changePinBtn" type="button">PIN ändern</button>
+      </section>
     </div>
 
     <div class="menu-panel" data-panel="recent" hidden>
       <div id="recentEntriesList" class="recent-entries-list">
-        <p class="archive-placeholder" id="recentEmptyMsg">Noch keine Einträge.</p>
+        <p class="archive-placeholder" id="recentEmptyMsg">Noch keine Einträge – halte den Kreis gedrückt und sprich einfach los.</p>
       </div>
     </div>
 
     <div class="menu-panel" data-panel="guide" hidden>
       <h3 class="menu-section-title">So funktioniert Denkarium Capture</h3>
       <p class="guide-text">
-        <strong>Aufnahme-Kreis:</strong> Gedrückt halten zum Sprechen, loslassen zum Beenden.
-        Beim Halten nach unten ziehen, um freihändig aufzunehmen (Sperre). Während der Aufnahme
-        zum Mülleimer-Symbol ziehen, um sie zu verwerfen.
+        <strong>Aufnehmen:</strong> Kreis gedrückt halten und sprechen – beim Loslassen wird die
+        Notiz automatisch ins aktive Projekt gespeichert. Beim Halten nach unten ziehen sperrt
+        die Aufnahme für freihändiges Sprechen (zum Beenden erneut tippen). Zum Papierkorb
+        ziehen verwirft die Aufnahme.
       </p>
       <p class="guide-text">
-        <strong>Stift-Symbol:</strong> Notiz manuell per Tastatur eingeben.
+        <strong>Plus-Knopf:</strong> Tippen öffnet „Notiz schreiben“ und „Datei hochladen“.
+        Gedrückt halten öffnet direkt das Notizfeld.
       </p>
       <p class="guide-text">
-        <strong>Büroklammer-Symbol:</strong> Datei oder Bild aus der Galerie an Google Drive senden.
+        <strong>Projekte:</strong> Oben in der Mitte wechselst du das aktive Projekt. Jedes
+        Projekt hat seinen eigenen Google-Drive-Ordner – festlegen kannst du ihn in den
+        Einstellungen unter „Projekte“.
       </p>
       <p class="guide-text">
-        <strong>Umschalter oben:</strong> Zwischen Hell-, Dunkel- und Custom-Darstellung wechseln.
+        <strong>Ansicht:</strong> Ein Tipp auf den freien Hintergrund blendet alle
+        Bedienelemente aus – und wieder ein. Unten links wechselst du zwischen Hell, Dunkel
+        und deinen Custom-Designs.
       </p>
       <p class="guide-text">
-        <strong>Dieses Menü:</strong> Von der unteren Bildschirmhälfte nach oben wischen, um
-        Einstellungen, letzte Einträge und diese Anleitung zu öffnen.
+        <strong>Letzte Einträge:</strong> Zeigt deine letzten 10 Notizen (PIN-geschützt).
+        Eintrag antippen, bearbeiten, speichern – die überarbeitete Fassung landet als
+        neue Datei mit dem Zusatz „2.0“ in Google Drive, das Original bleibt erhalten.
+      </p>
+      <p class="guide-text">
+        <strong>Dieses Menü:</strong> Von der unteren Bildschirmhälfte nach oben wischen.
       </p>
     </div>
   </aside>
@@ -205,6 +301,17 @@
     </div>
   </div>
 
+  <div class="name-dialog" id="nameDialog" hidden>
+    <div class="name-dialog__box">
+      <p class="name-dialog__title" id="nameDialogTitle">Projekt</p>
+      <input type="text" id="nameDialogInput" maxlength="40" autocomplete="off" />
+      <div class="text-entry__actions">
+        <button id="nameDialogCancel" type="button">Abbrechen</button>
+        <button id="nameDialogOk" type="button">Übernehmen</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script src="config.js"></script>
@@ -213,6 +320,7 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script>gapiLoaded();</script>
   <script src="appearance.js"></script>
+  <script src="projects.js"></script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

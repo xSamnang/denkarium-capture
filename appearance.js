@@ -1,14 +1,17 @@
-// --- Erscheinungsbild: Hell/Dunkel/Custom-Umschalter + Custom-Presets ---
-// Hell und Dunkel sind feste Vorgaben. Im Custom-Modus lassen sich Farbe
-// innen/außen und die Ring-Akzentfarbe frei wählen und in bis zu 3 Presets
-// gespeichert werden.
+// --- Erscheinungsbild: Hell/Dunkel/Custom + Presets + Farbrad ---
+// Hell und Dunkel sind feste Vorgaben (inkl. eigener Akzentfarbe fürs UI).
+// Im Custom-Modus wählt man über das Farbrad je Ziel (Kreis, Hintergrund,
+// Ring, Buttons) eine Farbe; bis zu 3 Presets sind speicherbar.
 
 const THEME_MODE_KEY = 'denkarium_theme_mode';
 const ACTIVE_PRESET_KEY = 'denkarium_active_preset';
 const PRESETS_KEY = 'denkarium_custom_presets';
+const RING_ENABLED_KEY = 'denkarium_ring_enabled';
+const VIBRATE_KEY = 'denkarium_vibrate';
 const DEFAULT_RING_COLOR = '#ff9a3c';
 const DEFAULT_UI_ACCENT = '#1a1a1a';
 
+// Legacy: ältere Presets speicherten Farbnamen statt Hex-Werte
 const SWATCH_COLORS = {
   black: '#000000',
   white: '#ffffff',
@@ -24,8 +27,13 @@ const SWATCH_COLORS = {
   pink: '#ec407a',
 };
 
+function resolveColor(value, fallback) {
+  if (typeof value === 'string' && value.startsWith('#')) return value;
+  return SWATCH_COLORS[value] || fallback || '#000000';
+}
+
 function defaultPreset() {
-  return { inner: 'black', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR, uiAccent: DEFAULT_UI_ACCENT };
+  return { inner: '#000000', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR, uiAccent: DEFAULT_UI_ACCENT };
 }
 
 function loadPresets() {
@@ -45,20 +53,64 @@ function savePresets() {
 
 let presets = loadPresets();
 let activePresetIndex = Number(localStorage.getItem(ACTIVE_PRESET_KEY) || 0);
+if (!(activePresetIndex >= 0 && activePresetIndex <= 2)) activePresetIndex = 0;
 
 const recordButtonEl = document.getElementById('recordButton');
 const spaceEl = document.querySelector('.space');
 const dustEl = document.querySelector('.dust');
+const stageEl = document.querySelector('.stage');
 const themeSwitcher = document.getElementById('themeSwitcher');
 const presetRow = document.getElementById('presetRow');
-const innerSwatches = document.getElementById('innerSwatches');
-const outerSwatches = document.getElementById('outerSwatches');
 const bgPhotoInput = document.getElementById('bgPhotoInput');
-const ringColorInput = document.getElementById('ringColorInput');
-const uiAccentInput = document.getElementById('uiAccentInput');
 const ringToggle = document.getElementById('ringToggle');
-const stageEl = document.querySelector('.stage');
-const RING_ENABLED_KEY = 'denkarium_ring_enabled';
+const vibrationToggle = document.getElementById('vibrationToggle');
+const colorTargets = document.getElementById('colorTargets');
+const colorWheel = document.getElementById('colorWheel');
+const wheelCursor = document.getElementById('wheelCursor');
+const neutralChips = document.getElementById('neutralChips');
+const outerSpecials = document.getElementById('outerSpecials');
+
+/* ---------- Farb-Helfer ---------- */
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const c = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// liefert den Farbton (0-360) eines Hex-Werts, oder null bei Grautönen
+function hexToHue(hex) {
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return null;
+  const r = parseInt(c.substring(0, 2), 16) / 255;
+  const g = parseInt(c.substring(2, 4), 16) / 255;
+  const b = parseInt(c.substring(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  if (delta < 0.08) return null; // praktisch grau/schwarz/weiß
+  let h;
+  if (max === r) h = ((g - b) / delta) % 6;
+  else if (max === g) h = (b - r) / delta + 2;
+  else h = (r - g) / delta + 4;
+  return (h * 60 + 360) % 360;
+}
+
+function contrastingTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#111111' : '#ffffff';
+}
+
+/* ---------- Einstellungen: Ring & Vibration ---------- */
 
 function isRingEnabled() {
   const v = localStorage.getItem(RING_ENABLED_KEY);
@@ -76,26 +128,34 @@ ringToggle.addEventListener('change', () => {
   applyRingEnabled();
 });
 
+function isVibrationEnabled() {
+  const v = localStorage.getItem(VIBRATE_KEY);
+  return v === null ? true : v === '1';
+}
+
+vibrationToggle.checked = isVibrationEnabled();
+vibrationToggle.addEventListener('change', () => {
+  localStorage.setItem(VIBRATE_KEY, vibrationToggle.checked ? '1' : '0');
+});
+
+/* ---------- Theme anwenden ---------- */
+
 function setRingColor(hex) {
   document.documentElement.style.setProperty('--ring-color', hex);
 }
 
-function contrastingTextColor(hex) {
-  const c = hex.replace('#', '');
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.55 ? '#111111' : '#ffffff';
+function setAccent(hex) {
+  document.documentElement.style.setProperty('--accent', hex);
+  document.documentElement.style.setProperty('--accent-fg', contrastingTextColor(hex));
 }
 
-function setUiAccent(hex) {
-  document.documentElement.style.setProperty('--ui-accent', hex);
-  document.documentElement.style.setProperty('--ui-accent-fg', contrastingTextColor(hex));
+function clearAccentOverride() {
+  document.documentElement.style.removeProperty('--accent');
+  document.documentElement.style.removeProperty('--accent-fg');
 }
 
-function setInnerColor(colorKey) {
-  recordButtonEl.style.background = SWATCH_COLORS[colorKey] || '#000000';
+function setInnerColor(value) {
+  recordButtonEl.style.background = resolveColor(value, '#000000');
 }
 
 function setOuterBackground(mode, photoDataUrl) {
@@ -106,13 +166,12 @@ function setOuterBackground(mode, photoDataUrl) {
     document.body.style.backgroundSize = 'cover';
     document.body.style.backgroundPosition = 'center';
     document.body.style.backgroundColor = '#05060c';
-  } else if (SWATCH_COLORS[mode]) {
+  } else if (mode !== 'starfield') {
     spaceEl.hidden = true;
     dustEl.hidden = true;
     document.body.style.backgroundImage = '';
-    document.body.style.backgroundColor = SWATCH_COLORS[mode];
+    document.body.style.backgroundColor = resolveColor(mode, '#05060c');
   } else {
-    // 'starfield' (Standard)
     spaceEl.hidden = false;
     dustEl.hidden = false;
     document.body.style.backgroundImage = '';
@@ -120,58 +179,188 @@ function setOuterBackground(mode, photoDataUrl) {
   }
 }
 
-function markSelectedSwatch(container, value) {
-  container.querySelectorAll('.swatch').forEach((btn) => {
-    btn.classList.toggle('selected', btn.dataset.color === value);
-  });
-}
-
-function markActivePresetButton() {
-  presetRow.querySelectorAll('.preset-btn').forEach((btn) => {
-    btn.classList.toggle('active', Number(btn.dataset.preset) === activePresetIndex);
-  });
-}
-
 function currentThemeMode() {
   return localStorage.getItem(THEME_MODE_KEY) || 'light';
 }
 
+function activePreset() {
+  return presets[activePresetIndex] || defaultPreset();
+}
+
 function applyTheme() {
   const mode = currentThemeMode();
+  document.documentElement.dataset.theme = mode;
 
   if (mode === 'light') {
-    setInnerColor('black');
-    setOuterBackground('white', null);
+    setInnerColor('#000000');
+    setOuterBackground('#ffffff', null);
     setRingColor(DEFAULT_RING_COLOR);
-    setUiAccent('#222222');
+    clearAccentOverride();
   } else if (mode === 'dark') {
-    setInnerColor('white');
-    setOuterBackground('black', null);
+    setInnerColor('#ffffff');
+    setOuterBackground('#000000', null);
     setRingColor(DEFAULT_RING_COLOR);
-    setUiAccent('#ffffff');
+    clearAccentOverride();
   } else {
-    const preset = presets[activePresetIndex] || defaultPreset();
+    const preset = activePreset();
     setInnerColor(preset.inner);
     setOuterBackground(preset.outer, preset.outerPhoto);
-    setRingColor(preset.ring || DEFAULT_RING_COLOR);
-    setUiAccent(preset.uiAccent || DEFAULT_UI_ACCENT);
+    setRingColor(resolveColor(preset.ring, DEFAULT_RING_COLOR));
+    setAccent(resolveColor(preset.uiAccent, DEFAULT_UI_ACCENT));
   }
 
   themeSwitcher.querySelectorAll('button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  const activePreset = presets[activePresetIndex] || defaultPreset();
-  markSelectedSwatch(innerSwatches, activePreset.inner);
-  markSelectedSwatch(outerSwatches, activePreset.outer);
-  ringColorInput.value = activePreset.ring || DEFAULT_RING_COLOR;
-  uiAccentInput.value = activePreset.uiAccent || DEFAULT_UI_ACCENT;
-  markActivePresetButton();
+  presetRow.querySelectorAll('.preset-btn').forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.preset) === activePresetIndex);
+  });
+
+  updateColorUI();
 }
 
 function switchToCustomMode() {
   localStorage.setItem(THEME_MODE_KEY, 'custom');
 }
+
+/* ---------- Farbrad & Ziel-Auswahl ---------- */
+
+let colorTarget = 'inner'; // 'inner' | 'outer' | 'ring' | 'ui'
+
+function getTargetValue(target) {
+  const p = activePreset();
+  if (target === 'inner') return p.inner;
+  if (target === 'outer') return p.outer;
+  if (target === 'ring') return p.ring;
+  return p.uiAccent;
+}
+
+function setTargetValue(target, hex) {
+  const p = activePreset();
+  if (target === 'inner') p.inner = hex;
+  else if (target === 'outer') { p.outer = hex; p.outerPhoto = null; }
+  else if (target === 'ring') p.ring = hex;
+  else p.uiAccent = hex;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
+}
+
+function positionWheelCursor(hue) {
+  const size = colorWheel.clientWidth;
+  if (!size) { wheelCursor.hidden = true; return; }
+  const r = size * 0.335; // Mitte des Farbrings
+  const theta = ((hue + 90) * Math.PI) / 180;
+  const x = size / 2 + r * Math.sin(theta);
+  const y = size / 2 - r * Math.cos(theta);
+  wheelCursor.style.left = `${x}px`;
+  wheelCursor.style.top = `${y}px`;
+  wheelCursor.style.background = hslToHex(hue, 85, 55);
+  wheelCursor.hidden = false;
+}
+
+function updateColorUI() {
+  const p = activePreset();
+
+  // Farb-Punkte in den Ziel-Chips
+  colorTargets.querySelectorAll('.chip-dot').forEach((dot) => {
+    const which = dot.dataset.dot;
+    dot.classList.remove('chip-dot--starfield', 'chip-dot--photo');
+    if (which === 'outer' && p.outer === 'starfield') {
+      dot.style.background = '';
+      dot.classList.add('chip-dot--starfield');
+    } else if (which === 'outer' && p.outer === 'photo') {
+      dot.style.background = '';
+      dot.classList.add('chip-dot--photo');
+    } else {
+      dot.style.background = resolveColor(getTargetValue(which),
+        which === 'ring' ? DEFAULT_RING_COLOR : '#000000');
+    }
+  });
+
+  // Spezial-Optionen (Sterne/Foto) nur für den Hintergrund
+  outerSpecials.hidden = colorTarget !== 'outer';
+
+  // Rad-Cursor auf aktuelle Farbe setzen (bei Grau/Spezial ausblenden)
+  const value = getTargetValue(colorTarget);
+  if (colorTarget === 'outer' && (value === 'starfield' || value === 'photo')) {
+    wheelCursor.hidden = true;
+    return;
+  }
+  const hue = hexToHue(resolveColor(value, '#000000'));
+  if (hue === null) {
+    wheelCursor.hidden = true;
+  } else {
+    positionWheelCursor(hue);
+  }
+}
+
+colorTargets.addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  colorTarget = chip.dataset.target;
+  colorTargets.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === chip));
+  updateColorUI();
+});
+
+function handleWheelPointer(e) {
+  const rect = colorWheel.getBoundingClientRect();
+  const dx = e.clientX - (rect.left + rect.width / 2);
+  const dy = e.clientY - (rect.top + rect.height / 2);
+  const thetaConic = (Math.atan2(dx, -dy) * 180) / Math.PI; // 0° = oben, im Uhrzeigersinn
+  const hue = ((thetaConic - 90) % 360 + 360) % 360;        // Rad startet rechts bei Rot
+  const hex = hslToHex(hue, 85, 55);
+  setTargetValue(colorTarget, hex);
+}
+
+let wheelActive = false;
+colorWheel.addEventListener('pointerdown', (e) => {
+  wheelActive = true;
+  try { colorWheel.setPointerCapture(e.pointerId); } catch (err) { /* optional */ }
+  handleWheelPointer(e);
+});
+colorWheel.addEventListener('pointermove', (e) => {
+  if (wheelActive) handleWheelPointer(e);
+});
+['pointerup', 'pointercancel'].forEach((evt) =>
+  colorWheel.addEventListener(evt, () => { wheelActive = false; })
+);
+
+neutralChips.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-hex]');
+  if (!btn) return;
+  setTargetValue(colorTarget, btn.dataset.hex);
+});
+
+outerSpecials.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-mode]');
+  if (!btn) return;
+  if (btn.dataset.mode === 'photo') { bgPhotoInput.click(); return; }
+  const p = activePreset();
+  p.outer = 'starfield';
+  p.outerPhoto = null;
+  savePresets();
+  switchToCustomMode();
+  applyTheme();
+});
+
+bgPhotoInput.addEventListener('change', async () => {
+  const file = bgPhotoInput.files && bgPhotoInput.files[0];
+  bgPhotoInput.value = '';
+  if (!file) return;
+  try {
+    const dataUrl = await downscaleImage(file, 1600);
+    const p = activePreset();
+    p.outer = 'photo';
+    p.outerPhoto = dataUrl;
+    savePresets();
+    switchToCustomMode();
+    applyTheme();
+  } catch (err) {
+    console.error('Hintergrundbild konnte nicht geladen werden:', err);
+  }
+});
 
 function downscaleImage(file, maxDim) {
   return new Promise((resolve, reject) => {
@@ -199,6 +388,8 @@ function downscaleImage(file, maxDim) {
   });
 }
 
+/* ---------- Umschalter ---------- */
+
 themeSwitcher.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
@@ -211,57 +402,6 @@ presetRow.addEventListener('click', (e) => {
   if (!btn) return;
   activePresetIndex = Number(btn.dataset.preset);
   localStorage.setItem(ACTIVE_PRESET_KEY, String(activePresetIndex));
-  switchToCustomMode();
-  applyTheme();
-});
-
-innerSwatches.addEventListener('click', (e) => {
-  const btn = e.target.closest('.swatch');
-  if (!btn) return;
-  presets[activePresetIndex].inner = btn.dataset.color;
-  savePresets();
-  switchToCustomMode();
-  applyTheme();
-});
-
-outerSwatches.addEventListener('click', (e) => {
-  const btn = e.target.closest('.swatch');
-  if (!btn) return;
-  const mode = btn.dataset.color;
-  if (mode === 'photo') { bgPhotoInput.click(); return; }
-  presets[activePresetIndex].outer = mode;
-  presets[activePresetIndex].outerPhoto = null;
-  savePresets();
-  switchToCustomMode();
-  applyTheme();
-});
-
-bgPhotoInput.addEventListener('change', async () => {
-  const file = bgPhotoInput.files && bgPhotoInput.files[0];
-  bgPhotoInput.value = '';
-  if (!file) return;
-  try {
-    const dataUrl = await downscaleImage(file, 1600);
-    presets[activePresetIndex].outer = 'photo';
-    presets[activePresetIndex].outerPhoto = dataUrl;
-    savePresets();
-    switchToCustomMode();
-    applyTheme();
-  } catch (err) {
-    console.error('Hintergrundbild konnte nicht geladen werden:', err);
-  }
-});
-
-ringColorInput.addEventListener('input', () => {
-  presets[activePresetIndex].ring = ringColorInput.value;
-  savePresets();
-  switchToCustomMode();
-  applyTheme();
-});
-
-uiAccentInput.addEventListener('input', () => {
-  presets[activePresetIndex].uiAccent = uiAccentInput.value;
-  savePresets();
   switchToCustomMode();
   applyTheme();
 });

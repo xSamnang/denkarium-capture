@@ -1,8 +1,8 @@
 // --- Google Drive Anbindung ---
-// Schreibt Notizen als Markdown-Datei in einen einmalig ausgewählten Inbox-Ordner.
-// Zugriff ist über den Scope "drive.file" auf genau diesen Ordner beschränkt.
+// Schreibt Notizen als Markdown-Dateien in den Drive-Ordner des aktiven
+// Projekts (siehe projects.js). Zugriff ist über den Scope "drive.file"
+// auf die von der App selbst gewählten Ordner/Dateien beschränkt.
 
-const INBOX_FOLDER_KEY = 'denkarium_inbox_folder_id';
 const TOKEN_STORAGE_KEY = 'denkarium_google_token';
 
 // Zugriffstoken über Seiten-Neuladen hinweg merken (localStorage), damit man
@@ -97,7 +97,7 @@ function pickInboxFolder(accessToken) {
       .addView(view)
       .setOAuthToken(accessToken)
       .setDeveloperKey(GOOGLE_API_KEY)
-      .setTitle('Denkarium-Inbox-Ordner auswählen')
+      .setTitle('Drive-Ordner für dieses Projekt auswählen')
       .setCallback((data) => {
         if (data.action === google.picker.Action.PICKED) {
           resolve(data.docs[0].id);
@@ -110,12 +110,14 @@ function pickInboxFolder(accessToken) {
   });
 }
 
-async function ensureInboxFolder(forcePick) {
-  let folderId = forcePick ? null : localStorage.getItem(INBOX_FOLDER_KEY);
-  if (folderId) return folderId;
+// Zielordner des aktiven Projekts - fragt bei Bedarf einmalig per Picker nach
+// und merkt sich die Auswahl im Projekt (siehe projects.js).
+async function ensureProjectFolder() {
+  const project = getActiveProject();
+  if (project.folderId) return project.folderId;
   const token = await ensureAccessToken();
-  folderId = await pickInboxFolder(token);
-  localStorage.setItem(INBOX_FOLDER_KEY, folderId);
+  const folderId = await pickInboxFolder(token);
+  setProjectFolder(project.id, folderId);
   return folderId;
 }
 
@@ -146,7 +148,8 @@ async function getNextSequenceNumber(token, folderId, dateStr) {
 
 async function uploadMarkdownFile(token, folderId, filename, text) {
   const metadata = { name: filename, parents: [folderId], mimeType: 'text/markdown' };
-  const boundary = 'denkarium-boundary';
+  // zufällige Grenzmarke, damit Notiztext den Multipart-Aufbau nie stören kann
+  const boundary = 'denkarium-' + crypto.getRandomValues(new Uint32Array(2)).join('');
   const body =
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`
     + `--${boundary}\r\nContent-Type: text/markdown; charset=UTF-8\r\n\r\n${text}\r\n`
@@ -170,7 +173,7 @@ async function uploadMarkdownFile(token, folderId, filename, text) {
 
 async function saveNoteToDrive(text) {
   const token = await ensureAccessToken();
-  const folderId = await ensureInboxFolder(false);
+  const folderId = await ensureProjectFolder();
   const dateStr = buildDateString(new Date());
   const seq = await getNextSequenceNumber(token, folderId, dateStr);
   const filename = `${dateStr}_${seq}.md`;
@@ -179,7 +182,7 @@ async function saveNoteToDrive(text) {
 
 async function saveEditedVersion(originalName, text) {
   const token = await ensureAccessToken();
-  const folderId = await ensureInboxFolder(false);
+  const folderId = await ensureProjectFolder();
   const baseName = originalName.replace(/\.md$/, '');
   const filename = `${baseName}2.0.md`;
   return uploadMarkdownFile(token, folderId, filename, text);
@@ -187,14 +190,14 @@ async function saveEditedVersion(originalName, text) {
 
 async function uploadFileToDrive(file) {
   const token = await ensureAccessToken();
-  const folderId = await ensureInboxFolder(false);
+  const folderId = await ensureProjectFolder();
 
   const metadata = {
     name: file.name,
     parents: [folderId],
     mimeType: file.type || 'application/octet-stream',
   };
-  const boundary = 'denkarium-boundary-file';
+  const boundary = 'denkarium-' + crypto.getRandomValues(new Uint32Array(2)).join('');
   const metadataPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
   const fileHeader = `--${boundary}\r\nContent-Type: ${metadata.mimeType}\r\n\r\n`;
   const closing = `\r\n--${boundary}--`;

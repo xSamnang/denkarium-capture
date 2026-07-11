@@ -125,7 +125,12 @@ function applyVolume(volume01) {
 
   if (recording) {
     recordButton.style.transform = `scale(${1 + clamped * 0.22})`;
-    recordButton.style.boxShadow = `0 0 0 ${10 + clamped * 40}px rgba(255,255,255,${(0.04 + clamped * 0.16).toFixed(2)})`;
+    // weiche Aura in der Ringfarbe, die mit der Stimme atmet
+    const glowSize = Math.round(24 + clamped * 60);
+    const glowSpread = Math.round(6 + clamped * 26);
+    const glowMix = Math.round(14 + clamped * 26);
+    recordButton.style.boxShadow =
+      `0 0 ${glowSize}px ${glowSpread}px color-mix(in srgb, var(--ring-color) ${glowMix}%, transparent)`;
   }
 }
 
@@ -217,7 +222,7 @@ function stopRecordingInternals() {
 }
 
 // Beendet die Spracherkennung und wartet auf ihr tatsächliches 'end'-Ereignis,
-// bevor die Folgeaktion (Notiz-Review öffnen / verwerfen) ausgeführt wird -
+// bevor die Folgeaktion (automatisch speichern / verwerfen) ausgeführt wird -
 // sonst fehlt oft der zuletzt gesprochene Satz, der erst nach recognition.stop()
 // final ankommt.
 function stopSpeechAndRun(action) {
@@ -288,7 +293,7 @@ function onRecordPointerDown(e) {
   cancelTrash.classList.remove('armed');
   lockIndicator.hidden = true;
 
-  if (navigator.vibrate) navigator.vibrate(15);
+  if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
 
   // Pointer an den Button binden, damit pointerup/-move zuverlässig
   // ankommen, auch wenn der Finger beim Ziehen (Sperren/Abbrechen) den
@@ -329,7 +334,7 @@ lockIndicator.addEventListener('keydown', (e) => {
 
 idleLoop(performance.now());
 
-// --- Toast-Hinweis (Platzhalter-Feedback für noch nicht fertige Funktionen) ---
+// --- Toast-Hinweis (kurzes Feedback am unteren Bildschirmrand) ---
 const toast = document.getElementById('toast');
 let toastTimer = null;
 function showToast(message) {
@@ -392,8 +397,7 @@ recentEntriesList.addEventListener('click', (e) => {
 
 renderRecentEntries();
 
-// --- Stift-Icon: manuelle Text-Notiz ---
-const pencilBtn = document.getElementById('pencilBtn');
+// --- Texteingabe-Overlay (Neue Notiz / Eintrag bearbeiten) ---
 const textEntry = document.getElementById('textEntry');
 const textEntryInput = document.getElementById('textEntryInput');
 const textEntryCancel = document.getElementById('textEntryCancel');
@@ -408,8 +412,6 @@ function openTextEntry(prefillText, entryIndex) {
   textEntryInput.value = prefillText || '';
   textEntryInput.focus();
 }
-
-pencilBtn.addEventListener('click', () => openTextEntry(''));
 textEntryCancel.addEventListener('click', () => { textEntry.hidden = true; });
 textEntrySave.addEventListener('click', async () => {
   const text = textEntryInput.value.trim();
@@ -442,35 +444,63 @@ textEntrySave.addEventListener('click', async () => {
   }
 });
 
-// --- Google-Drive-Ordner manuell ändern (im Menü) ---
-document.getElementById('driveReconnectBtn').addEventListener('click', async () => {
-  try {
-    const token = await ensureAccessToken();
-    const folderId = await pickInboxFolder(token);
-    localStorage.setItem(INBOX_FOLDER_KEY, folderId);
-    showToast('Inbox-Ordner aktualisiert');
-  } catch (err) {
-    showToast('Abgebrochen oder fehlgeschlagen');
-  }
-});
-
-// --- Google-Drive-Ordner manuell ändern (im Archiv-Menü) ---
-document.getElementById('driveReconnectBtn').addEventListener('click', async () => {
-  try {
-    const token = await ensureAccessToken();
-    const folderId = await pickInboxFolder(token);
-    localStorage.setItem(INBOX_FOLDER_KEY, folderId);
-    showToast('Inbox-Ordner aktualisiert');
-  } catch (err) {
-    showToast('Abgebrochen oder fehlgeschlagen');
-  }
-});
-
-// --- Büroklammer-Icon: Datei anhängen ---
-const paperclipBtn = document.getElementById('paperclipBtn');
+// --- Plus-Knopf: Schnellmenü (Notiz/Datei), langes Drücken öffnet direkt die Notiz ---
+const fabWrap = document.getElementById('fabWrap');
+const fabBtn = document.getElementById('fabBtn');
+const speedDial = document.getElementById('speedDial');
+const dialNote = document.getElementById('dialNote');
+const dialFile = document.getElementById('dialFile');
 const fileInput = document.getElementById('fileInput');
 
-paperclipBtn.addEventListener('click', () => fileInput.click());
+let dialOpen = false;
+let fabPressTimer = null;
+let fabLongPressed = false;
+
+function openDial() {
+  dialOpen = true;
+  speedDial.hidden = false;
+  // erst einblenden, dann Klasse setzen, damit die Stagger-Transition greift
+  requestAnimationFrame(() => speedDial.classList.add('open'));
+  fabBtn.classList.add('open');
+  fabBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeDial() {
+  if (!dialOpen) return;
+  dialOpen = false;
+  speedDial.classList.remove('open');
+  speedDial.hidden = true;
+  fabBtn.classList.remove('open');
+  fabBtn.setAttribute('aria-expanded', 'false');
+}
+
+fabBtn.addEventListener('pointerdown', () => {
+  fabLongPressed = false;
+  clearTimeout(fabPressTimer);
+  fabPressTimer = setTimeout(() => {
+    fabLongPressed = true;
+    closeDial();
+    if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(10);
+    openTextEntry('');
+  }, 450);
+});
+['pointerup', 'pointerleave', 'pointercancel'].forEach((evt) =>
+  fabBtn.addEventListener(evt, (e) => {
+    clearTimeout(fabPressTimer);
+    if (evt === 'pointerup' && !fabLongPressed) {
+      dialOpen ? closeDial() : openDial();
+    }
+  })
+);
+fabBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+dialNote.addEventListener('click', () => { closeDial(); openTextEntry(''); });
+dialFile.addEventListener('click', () => { closeDial(); fileInput.click(); });
+
+document.addEventListener('click', (e) => {
+  if (dialOpen && !fabWrap.contains(e.target)) closeDial();
+});
+
 fileInput.addEventListener('change', async () => {
   const file = fileInput.files && fileInput.files[0];
   if (!file) return;
@@ -492,31 +522,54 @@ const menuBackdrop = document.getElementById('menuBackdrop');
 const menuClose = document.getElementById('menuClose');
 const menuTabs = document.getElementById('menuTabs');
 
-function openArchive() {
+// "Letzte Einträge" ist der einzige PIN-geschützte Bereich - einmal
+// entsperrt bleibt er für die laufende Sitzung offen.
+let recentUnlocked = false;
+
+function openMenu() {
   menuSheet.classList.add('open');
   menuBackdrop.classList.add('open');
   menuSheet.setAttribute('aria-hidden', 'false');
 }
-function closeArchive() {
+function closeMenu() {
   menuSheet.classList.remove('open');
   menuBackdrop.classList.remove('open');
   menuSheet.setAttribute('aria-hidden', 'true');
 }
 
-menuClose.addEventListener('click', closeArchive);
-menuBackdrop.addEventListener('click', closeArchive);
+// wird auch von projects.js ("Projekte verwalten …") aufgerufen
+function openMenuAtSettings() {
+  activateTab('settings');
+  openMenu();
+}
+
+function activateTab(target) {
+  menuTabs.querySelectorAll('.menu-tab').forEach((btn) =>
+    btn.classList.toggle('active', btn.dataset.tab === target)
+  );
+  menuSheet.querySelectorAll('.menu-panel').forEach((panel) => {
+    panel.hidden = panel.dataset.panel !== target;
+  });
+}
+
+menuClose.addEventListener('click', closeMenu);
+menuBackdrop.addEventListener('click', closeMenu);
 
 menuTabs.addEventListener('click', (e) => {
   const tabBtn = e.target.closest('.menu-tab');
   if (!tabBtn) return;
   const target = tabBtn.dataset.tab;
-  menuTabs.querySelectorAll('.menu-tab').forEach((btn) => btn.classList.toggle('active', btn === tabBtn));
-  menuSheet.querySelectorAll('.menu-panel').forEach((panel) => {
-    panel.hidden = panel.dataset.panel !== target;
-  });
+  if (target === 'recent' && !recentUnlocked) {
+    requestPinUnlock(() => {
+      recentUnlocked = true;
+      activateTab('recent');
+    });
+    return;
+  }
+  activateTab(target);
 });
 
-// --- PIN-Schutz fürs Archiv ---
+// --- PIN-Schutz (nur für "Letzte Einträge") ---
 const PIN_STORAGE_KEY = 'denkarium_pin_hash';
 const pinGate = document.getElementById('pinGate');
 const pinTitle = document.getElementById('pinTitle');
@@ -529,6 +582,7 @@ const pinDelete = document.getElementById('pinDelete');
 let pinEntered = '';
 let pinMode = 'verify'; // 'verify' | 'set' | 'confirm'
 let pinFirstEntry = '';
+let pinOnSuccess = null;
 
 async function sha256(text) {
   const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -539,19 +593,52 @@ function renderPinDots() {
   [...pinDots.children].forEach((dot, i) => dot.classList.toggle('filled', i < pinEntered.length));
 }
 
-function openPinGate() {
+function startPinFlow(mode, title, onSuccess) {
   pinEntered = '';
+  pinFirstEntry = '';
   pinError.textContent = '';
-  const hasPin = !!localStorage.getItem(PIN_STORAGE_KEY);
-  pinMode = hasPin ? 'verify' : 'set';
-  pinTitle.textContent = hasPin ? 'PIN eingeben' : 'Neue PIN festlegen';
+  pinMode = mode;
+  pinTitle.textContent = title;
+  pinOnSuccess = onSuccess;
   renderPinDots();
   pinGate.hidden = false;
+}
+
+// Entsperren: fragt die bestehende PIN ab; gibt es noch keine,
+// wird sie zuerst festgelegt (mit Bestätigung).
+function requestPinUnlock(onSuccess) {
+  const hasPin = !!localStorage.getItem(PIN_STORAGE_KEY);
+  if (hasPin) {
+    startPinFlow('verify', 'PIN eingeben', onSuccess);
+  } else {
+    startPinFlow('set', 'Neue PIN festlegen', onSuccess);
+  }
+}
+
+// PIN ändern (Einstellungen -> Sicherheit): erst alte bestätigen, dann neue setzen
+function requestPinChange() {
+  const hasPin = !!localStorage.getItem(PIN_STORAGE_KEY);
+  if (!hasPin) {
+    startPinFlow('set', 'Neue PIN festlegen', () => showToast('PIN festgelegt'));
+    return;
+  }
+  startPinFlow('verify', 'Aktuelle PIN eingeben', () => {
+    startPinFlow('set', 'Neue PIN festlegen', () => showToast('PIN geändert'));
+  });
 }
 
 function closePinGate() {
   pinGate.hidden = true;
   pinEntered = '';
+  pinOnSuccess = null;
+}
+
+function finishPinSuccess() {
+  const cb = pinOnSuccess;
+  pinGate.hidden = true;
+  pinEntered = '';
+  pinOnSuccess = null;
+  if (cb) cb();
 }
 
 function shakePinDots(message) {
@@ -583,16 +670,14 @@ async function submitPin() {
       return;
     }
     localStorage.setItem(PIN_STORAGE_KEY, await sha256(pinEntered));
-    closePinGate();
-    openArchive();
+    finishPinSuccess();
     return;
   }
 
   // mode 'verify'
   const hash = await sha256(pinEntered);
   if (hash === localStorage.getItem(PIN_STORAGE_KEY)) {
-    closePinGate();
-    openArchive();
+    finishPinSuccess();
   } else {
     shakePinDots('Falsche PIN');
   }
@@ -611,6 +696,19 @@ pinDelete.addEventListener('click', () => {
 });
 pinCancel.addEventListener('click', closePinGate);
 
+document.getElementById('changePinBtn').addEventListener('click', requestPinChange);
+
+// --- Zen-Modus: Tipp auf den freien Hintergrund blendet die Bedienelemente aus ---
+const stageArea = document.querySelector('.stage');
+stageArea.addEventListener('click', (e) => {
+  if (e.target !== stageArea) return;          // nur echter Hintergrund, nicht der Kreis
+  if (recording || locked) return;             // während einer Aufnahme nichts verstecken
+  if (menuSheet.classList.contains('open')) return;
+  if (dialOpen) { closeDial(); return; }       // offenes Schnellmenü zuerst schließen
+  document.body.classList.toggle('zen');
+});
+
+// --- Wisch-Gesten: hoch = Menü öffnen, runter = schließen ---
 let touchStartX = null;
 let touchStartY = null;
 
@@ -624,15 +722,15 @@ document.addEventListener('touchend', (e) => {
   if (touchStartX === null) return;
   const t = e.changedTouches[0];
   const dx = Math.abs(t.clientX - touchStartX);
-  const dy = t.clientY - touchStartY; // negative = nach oben gewischt
+  const dy = t.clientY - touchStartY; // negativ = nach oben gewischt
 
   const panelOpen = menuSheet.classList.contains('open');
   const startedInLowerHalf = touchStartY > window.innerHeight / 2;
 
   if (!panelOpen && startedInLowerHalf && dy < -70 && dx < 60) {
-    openPinGate();
+    openMenu();
   } else if (panelOpen && dy > 70 && dx < 60) {
-    closeArchive();
+    closeMenu();
   }
   touchStartX = null;
   touchStartY = null;
