@@ -116,10 +116,16 @@ async function saveTranscriptDirectly(text) {
   } catch (err) {
     console.error('Speichern in Drive fehlgeschlagen:', err);
     if (err && (err.error === 'access_denied' || err.error === 'popup_closed_by_user')) {
-      showToast('Google-Anmeldung abgebrochen – bitte erneut versuchen und auf "Weiter" klicken');
+      showToast('Google-Anmeldung abgebrochen – Text bitte hier erneut speichern');
     } else {
-      showToast('Fehler beim Speichern – bitte erneut versuchen');
+      showToast('Anmeldung nötig oder Fehler – Text bitte hier erneut speichern');
     }
+    // Text nicht verwerfen: Notizfeld mit dem gesprochenen Text
+    // vorausfüllen, damit ein Anmelde-Problem nicht auch noch die Aufnahme
+    // kostet. Der "Speichern"-Tipp dort ist außerdem ein echter Klick, mit
+    // dem eine evtl. nötige Google-Anmeldung zuverlässig funktioniert -
+    // anders als ein automatischer Versuch tief in dieser asynchronen Kette.
+    openTextEntry(text);
   }
 }
 
@@ -308,6 +314,12 @@ function onRecordPointerDown(e) {
   lockIndicator.hidden = true;
 
   if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
+
+  // Google-Zugangstoken schon jetzt auffrischen (nicht abwarten) - im
+  // frischen Tipp-Kontext dieses Tastendrucks funktioniert eine evtl.
+  // nötige Anmeldung zuverlässig, statt erst Sekunden später beim
+  // automatischen Speichern nach der Aufnahme geblockt zu werden.
+  prefetchAccessToken();
 
   // Pointer an den Button binden, damit pointerup/-move zuverlässig
   // ankommen, auch wenn der Finger beim Ziehen (Sperren/Abbrechen) den

@@ -67,24 +67,48 @@ function requestAccessToken(interactive) {
 }
 
 const GOOGLE_GRANTED_KEY = 'denkarium_google_granted';
+let tokenRefreshPromise = null;
 
 async function ensureAccessToken() {
   if (driveAccessToken && Date.now() < driveTokenExpiry) return driveAccessToken;
 
-  // Nur nach einer bereits einmal erteilten Erlaubnis leise (ohne Popup)
-  // versuchen zu erneuern - sonst direkt mit Popup anfragen, damit der
-  // Klick-Bezug für den Popup-Blocker erhalten bleibt.
-  if (localStorage.getItem(GOOGLE_GRANTED_KEY)) {
-    try {
-      return await requestAccessToken(false);
-    } catch (e) {
-      // leiser Versuch gescheitert (z. B. Sitzung abgelaufen) - mit Popup erneut versuchen
-    }
-  }
+  // Läuft schon eine Anfrage (z. B. vorab beim Antippen des Aufnahme-Buttons
+  // gestartet, siehe app.js prefetchAccessToken) - dieselbe Anfrage abwarten
+  // statt eine zweite anzustoßen, sonst könnten zwei Anmelde-Fenster
+  // gleichzeitig aufgehen.
+  if (tokenRefreshPromise) return tokenRefreshPromise;
 
-  const token = await requestAccessToken(true);
-  localStorage.setItem(GOOGLE_GRANTED_KEY, '1');
-  return token;
+  tokenRefreshPromise = (async () => {
+    // Nur nach einer bereits einmal erteilten Erlaubnis leise (ohne Popup)
+    // versuchen zu erneuern - sonst direkt mit Popup anfragen, damit der
+    // Klick-Bezug für den Popup-Blocker erhalten bleibt.
+    if (localStorage.getItem(GOOGLE_GRANTED_KEY)) {
+      try {
+        return await requestAccessToken(false);
+      } catch (e) {
+        // leiser Versuch gescheitert (z. B. Sitzung abgelaufen) - mit Popup erneut versuchen
+      }
+    }
+    const token = await requestAccessToken(true);
+    localStorage.setItem(GOOGLE_GRANTED_KEY, '1');
+    return token;
+  })();
+
+  try {
+    return await tokenRefreshPromise;
+  } finally {
+    tokenRefreshPromise = null;
+  }
+}
+
+// Stößt eine Token-Auffrischung an, ohne auf sie zu warten - wird beim
+// Antippen des Aufnahme-Buttons aufgerufen. So läuft ein evtl. nötiger
+// Anmelde-Dialog noch im "frischen" Tipp-Kontext des Nutzers, statt erst
+// Sekunden später beim automatischen Speichern nach der Aufnahme, wo
+// Browser einen dann unaufgeforderten Popup meist blockieren - genau das
+// hat sich bisher wie ein ständiges Ausgeloggtwerden angefühlt.
+function prefetchAccessToken() {
+  ensureAccessToken().catch(() => { /* wird beim tatsächlichen Speichern erneut versucht */ });
 }
 
 function pickInboxFolder(accessToken) {
