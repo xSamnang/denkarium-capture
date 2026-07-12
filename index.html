@@ -113,10 +113,11 @@
       </button>
       <button type="button" class="menu-tab" data-tab="guide">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.2 9a2.8 2.8 0 0 1 5.6.3c0 1.8-2.8 2.4-2.8 3.9" />
+          <circle cx="12" cy="17" r="0.4" fill="currentColor" />
         </svg>
-        <span>Anleitung</span>
+        <span>Hilfe</span>
       </button>
     </nav>
 
@@ -227,35 +228,315 @@
     </div>
 
     <div class="menu-panel" data-panel="guide" hidden>
-      <h3 class="menu-section-title">So funktioniert Denkarium Capture</h3>
-      <p class="guide-text">
-        <strong>Aufnehmen:</strong> Kreis gedrückt halten und sprechen – beim Loslassen wird die
-        Notiz automatisch ins aktive Projekt gespeichert. Beim Halten nach unten ziehen sperrt
-        die Aufnahme für freihändiges Sprechen (zum Beenden erneut tippen). Zum Papierkorb
-        ziehen verwirft die Aufnahme.
-      </p>
-      <p class="guide-text">
-        <strong>Plus-Knopf:</strong> Tippen öffnet „Notiz schreiben“ und „Datei hochladen“.
-        Gedrückt halten öffnet direkt das Notizfeld.
-      </p>
-      <p class="guide-text">
-        <strong>Projekte:</strong> Oben in der Mitte wechselst du das aktive Projekt. Jedes
-        Projekt hat seinen eigenen Google-Drive-Ordner – festlegen kannst du ihn in den
-        Einstellungen unter „Projekte“.
-      </p>
-      <p class="guide-text">
-        <strong>Ansicht:</strong> Ein Tipp auf den freien Hintergrund blendet alle
-        Bedienelemente aus – und wieder ein. Unten links wechselst du zwischen Hell, Dunkel
-        und deinen Custom-Designs.
-      </p>
-      <p class="guide-text">
-        <strong>Letzte Einträge:</strong> Zeigt deine letzten 10 Notizen (PIN-geschützt).
-        Eintrag antippen, bearbeiten, speichern – die überarbeitete Fassung landet als
-        neue Datei mit dem Zusatz „2.0“ in Google Drive, das Original bleibt erhalten.
-      </p>
-      <p class="guide-text">
-        <strong>Dieses Menü:</strong> Von der unteren Bildschirmhälfte nach oben wischen.
-      </p>
+      <div class="help-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+        </svg>
+        <input type="search" id="helpSearch" placeholder="Frage suchen …" autocomplete="off" />
+      </div>
+
+      <div class="help-list" id="helpList">
+        <section class="help-group" data-group="Erste Schritte">
+          <h4 class="help-group__title">Erste Schritte</h4>
+
+          <details class="faq">
+            <summary>Wie nehme ich eine Notiz per Sprache auf?</summary>
+            <div class="faq__body">
+              Halte den großen Kreis in der Mitte gedrückt und sprich einfach los. Sobald du
+              loslässt, wird das Gesprochene automatisch als Text erkannt und in deinem
+              aktiven Projekt in Google Drive gespeichert – ohne weiteren Zwischenschritt.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie schreibe ich eine Notiz mit der Tastatur?</summary>
+            <div class="faq__body">
+              Tippe unten rechts auf das Plus. Es öffnet sich ein kleines Menü mit
+              „Notiz schreiben“ und „Datei hochladen“. Noch schneller: Halte das Plus kurz
+              gedrückt – dann springt das Textfeld direkt auf.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie füge ich eine Datei oder ein Foto hinzu?</summary>
+            <div class="faq__body">
+              Plus antippen → „Datei hochladen“. Du kannst Bilder, PDFs und Dokumente aus
+              deinem Gerät auswählen; sie landen im Drive-Ordner deines aktiven Projekts.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie öffne ich dieses Menü?</summary>
+            <div class="faq__body">
+              Wische von der unteren Bildschirmhälfte nach oben. Hier findest du
+              Einstellungen, deine letzten Einträge und dieses Hilfe-Center.
+            </div>
+          </details>
+        </section>
+
+        <section class="help-group" data-group="Aufnahme">
+          <h4 class="help-group__title">Aufnahme &amp; Notizen</h4>
+
+          <details class="faq">
+            <summary>Kann ich freihändig aufnehmen, ohne den Kreis zu halten?</summary>
+            <div class="faq__body">
+              Ja. Halte den Kreis gedrückt und ziehe den Finger nach unten – die Aufnahme
+              rastet ein und läuft weiter, auch wenn du loslässt. Zum Beenden tippst du
+              einfach noch einmal auf den Kreis.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie breche ich eine laufende Aufnahme ab?</summary>
+            <div class="faq__body">
+              Während du den Kreis hältst, erscheint links ein Papierkorb-Symbol. Ziehe
+              den Finger dorthin und lass los – die Aufnahme wird verworfen und es wird
+              nichts gespeichert.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Muss ich meine Notizen nach der Aufnahme bestätigen?</summary>
+            <div class="faq__body">
+              Nein. Beim Loslassen wird direkt gespeichert. Wenn du eine Notiz nachträglich
+              ändern willst, findest du sie unter „Letzte Einträge“.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Was zeigt „Letzte Einträge“ an?</summary>
+            <div class="faq__body">
+              Deine 10 zuletzt gespeicherten Text-Notizen – egal ob per Sprache oder Tastatur.
+              Ältere Einträge verschwinden nur aus dieser Liste in der App. Die zugehörigen
+              Dateien in Google Drive bleiben immer erhalten und werden nie automatisch gelöscht.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie bearbeite ich einen bestehenden Eintrag?</summary>
+            <div class="faq__body">
+              Öffne „Letzte Einträge“, tippe den Eintrag an, ändere den Text und speichere.
+              Die überarbeitete Fassung wird als neue Datei mit dem Zusatz „2.0“ in Google
+              Drive abgelegt – die Originaldatei bleibt unangetastet erhalten.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie werden meine Dateien in Drive benannt?</summary>
+            <div class="faq__body">
+              Sprach- und Textnotizen bekommen einen Namen aus dem heutigen Datum und einer
+              fortlaufenden Nummer, z. B. „2026-07-11_1“, „2026-07-11_2“ und so weiter.
+              Hochgeladene Dateien behalten ihren Originalnamen.
+            </div>
+          </details>
+        </section>
+
+        <section class="help-group" data-group="Projekte">
+          <h4 class="help-group__title">Projekte &amp; Google Drive</h4>
+
+          <details class="faq">
+            <summary>Was ist ein Projekt?</summary>
+            <div class="faq__body">
+              Ein Projekt ist ein Ziel für deine Notizen mit einem eigenen Google-Drive-Ordner.
+              So kannst du z. B. „Uni“, „Ideen“ und „Arbeit“ trennen. Oben in der Mitte
+              wechselst du zwischen deinen Projekten – alles, was du danach aufnimmst, landet
+              im Ordner des gewählten Projekts.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie lege ich ein neues Projekt an?</summary>
+            <div class="faq__body">
+              Einstellungen → Projekte → „Neues Projekt“. Gib ihm einen Namen und wähle dann
+              über das Ordner-Symbol seinen Google-Drive-Zielordner.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie ändere ich den Zielordner eines Projekts?</summary>
+            <div class="faq__body">
+              Einstellungen → Projekte → beim gewünschten Projekt auf das Ordner-Symbol tippen
+              und im Google-Fenster einen neuen Ordner auswählen. Bereits gespeicherte Dateien
+              bleiben im alten Ordner; nur neue Notizen wandern in den neuen.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wo genau werden meine Notizen gespeichert?</summary>
+            <div class="faq__body">
+              Ausschließlich in dem Google-Drive-Ordner, den du für das jeweilige Projekt
+              ausgewählt hast. Die App speichert nichts auf eigenen Servern – deine Notizen
+              liegen komplett in deinem eigenen Google-Konto.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Warum muss ich mich bei Google anmelden?</summary>
+            <div class="faq__body">
+              Nur so darf die App in deinem Namen Dateien in deinem Google Drive anlegen.
+              Die Anmeldung passiert direkt bei Google; die App bekommt lediglich die
+              Erlaubnis, in die von dir gewählten Ordner zu schreiben.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Sieht die App mein gesamtes Google Drive?</summary>
+            <div class="faq__body">
+              Nein. Die App nutzt eine eingeschränkte Berechtigung (drive.file): Sie sieht und
+              bearbeitet nur die Dateien und Ordner, die du selbst über die App auswählst oder
+              die die App selbst erstellt hat. Dein übriges Drive bleibt für sie unsichtbar.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wenn ich ein Projekt lösche – sind dann meine Dateien weg?</summary>
+            <div class="faq__body">
+              Nein. Beim Löschen eines Projekts wird nur der Eintrag in der App entfernt.
+              Der Google-Drive-Ordner und alle Dateien darin bleiben vollständig erhalten.
+            </div>
+          </details>
+        </section>
+
+        <section class="help-group" data-group="Darstellung">
+          <h4 class="help-group__title">Darstellung &amp; Design</h4>
+
+          <details class="faq">
+            <summary>Wie wechsle ich zwischen Hell, Dunkel und Custom?</summary>
+            <div class="faq__body">
+              Unten links tippst du zwischen „Hell“, „Dunkel“ und „Custom“. Custom nutzt dein
+              gerade aktives Farb-Preset aus den Einstellungen.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie stelle ich eigene Farben ein?</summary>
+            <div class="faq__body">
+              Einstellungen → Darstellung. Wähle oben, welchen Bereich du färben willst
+              (Kreis, Hintergrund, Ring oder Buttons), und tippe dann die gewünschte Farbe
+              im Farbrad an. Schwarz, Grau und Weiß findest du daneben; für den Hintergrund
+              gibt es zusätzlich „Sterne“ und „Foto“.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Was sind die Presets 1, 2, 3?</summary>
+            <div class="faq__body">
+              Drei speicherbare Farbkombinationen im Custom-Modus. Wähle ein Preset aus und
+              passe die Farben an – sie werden automatisch für dieses Preset gemerkt, sodass
+              du jederzeit zwischen drei eigenen Looks wechseln kannst.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie blende ich die Knöpfe aus, um nur den Kreis zu sehen?</summary>
+            <div class="faq__body">
+              Tippe einmal auf den freien Hintergrund (nicht auf den Kreis). Alle
+              Bedienelemente gleiten sanft aus dem Bild. Ein weiterer Tipp holt sie zurück.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Kann ich den Ring um den Kreis abschalten?</summary>
+            <div class="faq__body">
+              Ja. Einstellungen → Darstellung → „Ring anzeigen“ ausschalten. Der Kreis
+              wächst dann auf dieselbe Gesamtgröße, sodass das Gesamtbild gleich bleibt.
+            </div>
+          </details>
+        </section>
+
+        <section class="help-group" data-group="Sicherheit">
+          <h4 class="help-group__title">Sicherheit &amp; Datenschutz</h4>
+
+          <details class="faq">
+            <summary>Wofür ist die PIN da?</summary>
+            <div class="faq__body">
+              Die PIN schützt nur den Bereich „Letzte Einträge“, damit niemand mit Zugriff auf
+              dein entsperrtes Handy schnell deine letzten Notizen lesen kann. Aufnehmen und
+              die Einstellungen sind ohne PIN erreichbar.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie ändere ich meine PIN?</summary>
+            <div class="faq__body">
+              Einstellungen → Sicherheit → „PIN ändern“. Du gibst zuerst die aktuelle PIN
+              ein und legst dann eine neue fest.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie sicher ist meine PIN wirklich?</summary>
+            <div class="faq__body">
+              Die PIN wird nicht im Klartext gespeichert, sondern nur als verschlüsselter
+              Prüfwert auf deinem Gerät. Sie ist ein Sichtschutz gegen neugierige Blicke –
+              keine vollständige Verschlüsselung deiner Notizen. Der eigentliche Schutz
+              deiner Daten liegt in deinem Google-Konto und dessen Passwort.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Muss ich mich jedes Mal neu bei Google anmelden?</summary>
+            <div class="faq__body">
+              Nein. Die Anmeldung bleibt eine Weile gültig, sodass du normalerweise ohne
+              erneutes Einloggen aufnehmen und speichern kannst. Erst wenn die Sitzung
+              abläuft, fragt Google wieder nach.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Warum warnt Google, die App sei „nicht überprüft“?</summary>
+            <div class="faq__body">
+              Weil dies eine private, nicht offiziell von Google geprüfte App ist – das ist
+              bei selbst gebauten Apps normal. Tippe auf der Warnseite auf „Erweitert“ und
+              dann auf „Weiter zu …“, um fortzufahren. Nur dein eigenes, freigeschaltetes
+              Konto kann sich überhaupt anmelden.
+            </div>
+          </details>
+        </section>
+
+        <section class="help-group" data-group="Probleme">
+          <h4 class="help-group__title">Probleme lösen</h4>
+
+          <details class="faq">
+            <summary>Die Spracherkennung erkennt nichts – was tun?</summary>
+            <div class="faq__body">
+              Prüfe, ob der App der Mikrofon-Zugriff erlaubt ist (im Browser über das
+              Schloss-Symbol in der Adresszeile bzw. in den Website-Einstellungen). Die
+              Spracherkennung braucht außerdem eine Internetverbindung. Sprich möglichst
+              nah am Mikrofon und in ruhiger Umgebung.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Funktioniert die App offline?</summary>
+            <div class="faq__body">
+              Die Oberfläche lädt auch offline. Das Erkennen von Sprache und das Speichern in
+              Google Drive brauchen jedoch Internet – ohne Verbindung kann nicht gespeichert
+              werden.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Ich sehe nach einem Update noch die alte Version.</summary>
+            <div class="faq__body">
+              Lade die Seite neu. Falls es weiterhin die alte Ansicht zeigt, leere in den
+              Browser-Einstellungen den Cache für diese Seite (oder deinstalliere die
+              installierte App und füge sie erneut zum Startbildschirm hinzu).
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie installiere ich die App auf dem Handy?</summary>
+            <div class="faq__body">
+              Öffne die Seite in Chrome, tippe auf das Menü (drei Punkte) und wähle „App
+              installieren“ bzw. „Zum Startbildschirm hinzufügen“. Danach startet sie mit
+              eigenem Icon und ohne Browser-Leiste.
+            </div>
+          </details>
+        </section>
+
+        <p class="help-empty" id="helpEmpty" hidden>Keine passende Frage gefunden. Formuliere sie anders oder schau in einer anderen Kategorie.</p>
+      </div>
     </div>
   </aside>
 

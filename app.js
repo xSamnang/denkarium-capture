@@ -698,6 +698,34 @@ pinCancel.addEventListener('click', closePinGate);
 
 document.getElementById('changePinBtn').addEventListener('click', requestPinChange);
 
+// --- Hilfe-Center: FAQ nach Frage/Antwort durchsuchen ---
+const helpSearch = document.getElementById('helpSearch');
+const helpEmpty = document.getElementById('helpEmpty');
+
+if (helpSearch) {
+  helpSearch.addEventListener('input', () => {
+    const query = helpSearch.value.trim().toLowerCase();
+    let anyVisible = false;
+
+    document.querySelectorAll('.help-group').forEach((group) => {
+      let groupHasMatch = false;
+      group.querySelectorAll('.faq').forEach((faq) => {
+        const text = faq.textContent.toLowerCase();
+        const match = query === '' || text.includes(query);
+        faq.hidden = !match;
+        if (match) groupHasMatch = true;
+        // beim Filtern automatisch aufklappen, damit die Antwort sichtbar wird
+        if (query !== '' && match) faq.open = true;
+        else if (query === '') faq.open = false;
+      });
+      group.hidden = !groupHasMatch;
+      if (groupHasMatch) anyVisible = true;
+    });
+
+    helpEmpty.hidden = anyVisible;
+  });
+}
+
 // --- Zen-Modus: Tipp auf den freien Hintergrund blendet die Bedienelemente aus ---
 const stageArea = document.querySelector('.stage');
 stageArea.addEventListener('click', (e) => {

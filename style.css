@@ -637,6 +637,103 @@ body.zen .chrome--br { transform: translateY(28px); }
 }
 .guide-text strong { color: var(--on-surface); }
 
+/* Hilfe-Center: Suche + FAQ-Akkordeon */
+.help-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--outline);
+  background: var(--surface-2);
+}
+.help-search svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex: none;
+}
+.help-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--on-surface);
+  font-size: 15px;
+  font-family: var(--font);
+  outline: none;
+}
+.help-search input::placeholder { color: var(--muted); }
+
+.help-group {
+  margin-bottom: 22px;
+}
+.help-group[hidden] { display: none; }
+.help-group__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.faq {
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  background: var(--surface-2);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.faq[hidden] { display: none; }
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--on-surface);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: none;
+  margin-left: auto;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--ease-out);
+}
+.faq[open] summary::after {
+  transform: rotate(-135deg);
+}
+.faq[open] summary { color: var(--accent); }
+.faq__body {
+  padding: 0 16px 15px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.help-empty {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  padding: 24px 8px;
+}
+.help-empty[hidden] { display: none; }
+
 .archive-placeholder {
   color: var(--muted);
   font-size: 14px;
