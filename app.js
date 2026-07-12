@@ -24,7 +24,13 @@ let recognitionErrorMessage = null;
 if (SpeechRecognitionImpl) {
   recognition = new SpeechRecognitionImpl();
   recognition.lang = 'de-DE';
-  recognition.continuous = true;
+  // continuous:true ist auf Android/Chrome Mobile stark fehlerhaft - der Dienst
+  // wiederholt dort intern dieselbe erkannte Phrase mehrfach als eigenes
+  // finales Ergebnis ("projekt projekt projekt ..."). Wir lassen jede Erkennung
+  // nach einer Sprechpause regulär enden und starten sie über das 'end'-Event
+  // unten selbst sofort neu - das ergibt effektiv durchgehende Diktierfunktion,
+  // ohne den kaputten nativen Dauerbetrieb zu nutzen.
+  recognition.continuous = false;
   recognition.interimResults = true;
 
   recognition.addEventListener('result', (event) => {
