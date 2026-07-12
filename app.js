@@ -3,12 +3,14 @@ const recordButton = document.getElementById('recordButton');
 const lensHalo = document.getElementById('lensHalo');
 const liveCaption = document.getElementById('liveCaption');
 const cancelTrash = document.getElementById('cancelTrash');
-const cancelTrashLabel = document.getElementById('cancelTrashLabel');
 const lockIndicator = document.getElementById('lockIndicator');
 const baseRingDuration = 3.5;
-const CANCEL_HINT_LABEL = 'Ziehen zum Abbrechen';
-const CANCEL_ARMED_LABEL = 'Loslassen zum Abbrechen';
-const CANCEL_COMMIT_PX = 100; // Wegstrecke, ab der Loslassen abbricht - bewusst kurz & großzügig
+// Abbrechen-Geste: nach unten rechts ziehen - dahin lässt sich der Button
+// am bequemsten mit dem rechten Daumen bewegen (dort hält man ihn meistens).
+const CANCEL_COMMIT_X = 70;
+const CANCEL_COMMIT_Y = 50;
+let cancelAnchorX = 0;
+let cancelAnchorY = 0;
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;
@@ -236,8 +238,6 @@ function stopRecordingInternals() {
   liveCaption.hidden = true;
   cancelTrash.hidden = true;
   cancelTrash.classList.remove('armed');
-  cancelTrash.style.transform = '';
-  cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
   lockIndicator.hidden = true;
   pendingCancel = false;
 
@@ -294,21 +294,22 @@ function onRecordPointerMove(e) {
     return;
   }
 
-  // zur Seite ziehen (links ODER rechts) -> Abbrechen, sobald losgelassen.
-  // Der Hinweis folgt gedämpft dem Finger statt an einem festen, weit
-  // entfernten Punkt zu kleben - so reicht eine kurze, bequeme Bewegung in
-  // die Richtung, die gerade angenehm ist.
-  if (Math.abs(dx) > Math.abs(dy)) {
-    const followX = Math.max(-70, Math.min(70, dx * 0.35));
-    cancelTrash.style.transform = `translate(calc(-50% + ${followX}px), -50%)`;
-    pendingCancel = Math.abs(dx) > CANCEL_COMMIT_PX;
+  // nach unten rechts ziehen -> Abbrechen, sobald losgelassen. Der
+  // Papierkorb folgt gedämpft weiter in diese Richtung; jede andere
+  // Richtung zeigt ihn nur an seinem Ausgangspunkt als Hinweis, ohne
+  // zu "scharf" zu werden.
+  if (dx > 0 && dy > 0) {
+    const followX = Math.min(55, dx * 0.3);
+    const followY = Math.min(55, dy * 0.3);
+    cancelTrash.style.left = (cancelAnchorX + followX) + 'px';
+    cancelTrash.style.top = (cancelAnchorY + followY) + 'px';
+    pendingCancel = dx > CANCEL_COMMIT_X && dy > CANCEL_COMMIT_Y;
     cancelTrash.classList.toggle('armed', pendingCancel);
-    cancelTrashLabel.textContent = pendingCancel ? CANCEL_ARMED_LABEL : CANCEL_HINT_LABEL;
   } else {
     pendingCancel = false;
     cancelTrash.classList.remove('armed');
-    cancelTrash.style.transform = '';
-    cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
+    cancelTrash.style.left = cancelAnchorX + 'px';
+    cancelTrash.style.top = cancelAnchorY + 'px';
   }
 }
 
@@ -324,10 +325,19 @@ function onRecordPointerDown(e) {
   pressStartY = e.clientY;
   locked = false;
   pendingCancel = false;
+
+  // Papierkorb-Hinweis schräg unten rechts vom Aufnahme-Kreis positionieren -
+  // das ist die Richtung, in die man ihn zum Abbrechen ziehen soll.
+  const btnRect = recordButton.getBoundingClientRect();
+  const btnCenterX = btnRect.left + btnRect.width / 2;
+  const btnCenterY = btnRect.top + btnRect.height / 2;
+  const diagOffset = btnRect.width * 0.4;
+  cancelAnchorX = btnCenterX + diagOffset;
+  cancelAnchorY = btnCenterY + diagOffset;
+  cancelTrash.style.left = cancelAnchorX + 'px';
+  cancelTrash.style.top = cancelAnchorY + 'px';
   cancelTrash.hidden = false;
   cancelTrash.classList.remove('armed');
-  cancelTrash.style.transform = '';
-  cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
   lockIndicator.hidden = true;
 
   if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
