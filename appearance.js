@@ -101,13 +101,40 @@ function hexToHue(hex) {
   return (h * 60 + 360) % 360;
 }
 
-function contrastingTextColor(hex) {
+function relLuminance(hex) {
   const c = hex.replace('#', '');
   const r = parseInt(c.substring(0, 2), 16);
   const g = parseInt(c.substring(2, 4), 16);
   const b = parseInt(c.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.55 ? '#111111' : '#ffffff';
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function contrastingTextColor(hex) {
+  return relLuminance(hex) > 0.55 ? '#111111' : '#ffffff';
+}
+
+function mixHex(hex, target, t) {
+  const a = hex.replace('#', '');
+  const b = target.replace('#', '');
+  const ch = (i) => {
+    const x = parseInt(a.substring(i, i + 2), 16);
+    const y = parseInt(b.substring(i, i + 2), 16);
+    return Math.round(x + (y - x) * t).toString(16).padStart(2, '0');
+  };
+  return `#${ch(0)}${ch(2)}${ch(4)}`;
+}
+
+// Akzentfarbe so aufhellen, dass sie als Text/Symbol auf der dunklen
+// Menüfläche (Custom-Modus) sicher lesbar bleibt - ein sehr dunkler
+// Akzent würde sonst mit dem Hintergrund verschwimmen.
+function readableAccentOnDark(hex) {
+  let t = 0;
+  let out = hex;
+  while (relLuminance(out) < 0.55 && t < 1) {
+    t += 0.12;
+    out = mixHex(hex, '#ffffff', t);
+  }
+  return out;
 }
 
 /* ---------- Einstellungen: Ring & Vibration ---------- */
@@ -147,11 +174,15 @@ function setRingColor(hex) {
 function setAccent(hex) {
   document.documentElement.style.setProperty('--accent', hex);
   document.documentElement.style.setProperty('--accent-fg', contrastingTextColor(hex));
+  // Custom-Modus nutzt die dunkle Menüfläche - Text/Symbole in Akzentfarbe
+  // werden bei Bedarf aufgehellt, damit sie immer lesbar bleiben.
+  document.documentElement.style.setProperty('--accent-strong', readableAccentOnDark(hex));
 }
 
 function clearAccentOverride() {
   document.documentElement.style.removeProperty('--accent');
   document.documentElement.style.removeProperty('--accent-fg');
+  document.documentElement.style.removeProperty('--accent-strong');
 }
 
 function setInnerColor(value) {

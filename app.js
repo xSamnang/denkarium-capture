@@ -172,6 +172,11 @@ async function startRecording() {
   liveCaption.textContent = '';
   liveCaption.hidden = false;
   if (recognition) {
+    // Spracherkennung ist der Kern - sie greift selbst aufs Mikrofon zu.
+    // Wir öffnen NICHT zusätzlich getUserMedia für die Lautstärke-Animation:
+    // auf vielen Handys bringt ein zweiter, paralleler Mikrofon-Zugriff die
+    // Spracherkennung zum Schweigen. Die lebendige Bewegung übernimmt
+    // stattdessen die simulierte Animation.
     recognitionShouldRun = true;
     try {
       recognition.start();
@@ -181,10 +186,14 @@ async function startRecording() {
         showToast('Spracherkennung konnte nicht gestartet werden');
       }
     }
-  } else {
-    liveCaption.textContent = 'Spracherkennung wird von diesem Browser nicht unterstützt – Text manuell eingeben.';
+    cancelAnimationFrame(rafId);
+    fakeRecordingTick(performance.now());
+    return;
   }
 
+  // Kein SpeechRecognition verfügbar: dann wenigstens die Lautstärke live
+  // anzeigen (Diktat ist ohnehin nicht möglich, Text muss getippt werden).
+  liveCaption.textContent = 'Spracherkennung wird von diesem Browser nicht unterstützt – Text manuell eingeben.';
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -197,7 +206,6 @@ async function startRecording() {
     recordingTick();
   } catch (err) {
     console.warn('Mikrofonzugriff fehlgeschlagen:', err.message);
-    showToast('Kein Mikrofonzugriff – prüfe die Berechtigung in den Browser-Einstellungen');
     cancelAnimationFrame(rafId);
     fakeRecordingTick(performance.now());
   }
@@ -555,10 +563,8 @@ function activateTab(target) {
 menuClose.addEventListener('click', closeMenu);
 menuBackdrop.addEventListener('click', closeMenu);
 
-menuTabs.addEventListener('click', (e) => {
-  const tabBtn = e.target.closest('.menu-tab');
-  if (!tabBtn) return;
-  const target = tabBtn.dataset.tab;
+// Tab wählen - "Letzte Einträge" verlangt einmal pro Sitzung die PIN.
+function selectTab(target) {
   if (target === 'recent' && !recentUnlocked) {
     requestPinUnlock(() => {
       recentUnlocked = true;
@@ -567,7 +573,48 @@ menuTabs.addEventListener('click', (e) => {
     return;
   }
   activateTab(target);
+}
+
+menuTabs.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('.menu-tab');
+  if (!tabBtn) return;
+  selectTab(tabBtn.dataset.tab);
 });
+
+// Links/rechts wischen wechselt zwischen den Tabs.
+const TAB_ORDER = ['settings', 'recent', 'guide'];
+function currentTabIndex() {
+  const active = menuTabs.querySelector('.menu-tab.active');
+  return active ? TAB_ORDER.indexOf(active.dataset.tab) : 0;
+}
+function stepTab(direction) {
+  const next = currentTabIndex() + direction;
+  if (next < 0 || next >= TAB_ORDER.length) return;
+  selectTab(TAB_ORDER[next]);
+}
+
+let menuSwipeX = null;
+let menuSwipeY = null;
+let menuSwipeIgnore = false;
+menuSheet.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  menuSwipeX = t.clientX;
+  menuSwipeY = t.clientY;
+  // Wischen, das auf dem Farbrad beginnt, gehört der Farbauswahl
+  menuSwipeIgnore = !!e.target.closest('.color-wheel');
+}, { passive: true });
+menuSheet.addEventListener('touchend', (e) => {
+  if (menuSwipeX === null || menuSwipeIgnore) { menuSwipeX = null; return; }
+  const t = e.changedTouches[0];
+  const dx = t.clientX - menuSwipeX;
+  const dy = t.clientY - menuSwipeY;
+  // klar horizontale Geste (nicht mit Scrollen/Schließen verwechseln)
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.8) {
+    stepTab(dx < 0 ? 1 : -1); // nach links wischen = nächster Tab
+  }
+  menuSwipeX = null;
+  menuSwipeY = null;
+}, { passive: true });
 
 // --- PIN-Schutz (nur für "Letzte Einträge") ---
 const PIN_STORAGE_KEY = 'denkarium_pin_hash';
@@ -725,6 +772,46 @@ if (helpSearch) {
     helpEmpty.hidden = anyVisible;
   });
 }
+
+// --- Feedback & Info ---
+const APP_VERSION = '1.0 (Build v7)';
+const FEEDBACK_EMAIL = 'ajunge.business@gmail.com';
+
+const appVersionEl = document.getElementById('appVersion');
+if (appVersionEl) appVersionEl.textContent = `Denkarium Capture · Version ${APP_VERSION}`;
+
+function openFeedbackMail(kind) {
+  const subject = kind === 'bug'
+    ? '[Denkarium Capture] Fehler melden'
+    : '[Denkarium Capture] Verbesserungsvorschlag';
+  const intro = kind === 'bug'
+    ? 'Was ist passiert? Was hattest du erwartet?'
+    : 'Deine Idee oder dein Wunsch:';
+  const body = [
+    intro,
+    '',
+    '',
+    '— Technische Infos (helfen bei der Fehlersuche, dürfen bleiben) —',
+    `Version: ${APP_VERSION}`,
+    `Gerät/Browser: ${navigator.userAgent}`,
+    `Sprache: ${navigator.language}`,
+  ].join('\n');
+  window.location.href =
+    `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+document.getElementById('reportBugBtn').addEventListener('click', () => openFeedbackMail('bug'));
+document.getElementById('suggestBtn').addEventListener('click', () => openFeedbackMail('idea'));
+
+// "Datenschutz & Sicherheit" springt ins Hilfe-Center zum Sicherheits-Bereich
+document.getElementById('privacyBtn').addEventListener('click', () => {
+  selectTab('guide');
+  const group = document.querySelector('.help-group[data-group="Sicherheit"]');
+  if (group) {
+    group.querySelectorAll('.faq').forEach((f) => { f.hidden = false; });
+    requestAnimationFrame(() => group.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+});
 
 // --- Zen-Modus: Tipp auf den freien Hintergrund blendet die Bedienelemente aus ---
 const stageArea = document.querySelector('.stage');
