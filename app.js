@@ -826,11 +826,16 @@ stageArea.addEventListener('click', (e) => {
 // --- Wisch-Gesten: hoch = Menü öffnen, runter = schließen ---
 let touchStartX = null;
 let touchStartY = null;
+let touchStartedInPanel = false;
 
 document.addEventListener('touchstart', (e) => {
   const t = e.touches[0];
   touchStartX = t.clientX;
   touchStartY = t.clientY;
+  // Wischen innerhalb der scrollbaren Liste (Einstellungen/Einträge/Hilfe)
+  // darf nur scrollen - nicht das Menü schließen. Zum Schließen per Wisch
+  // bleiben Griff und Tableiste (außerhalb von .menu-panel) zuständig.
+  touchStartedInPanel = !!e.target.closest('.menu-panel');
 }, { passive: true });
 
 document.addEventListener('touchend', (e) => {
@@ -844,7 +849,7 @@ document.addEventListener('touchend', (e) => {
 
   if (!panelOpen && startedInLowerHalf && dy < -70 && dx < 60) {
     openMenu();
-  } else if (panelOpen && dy > 70 && dx < 60) {
+  } else if (panelOpen && !touchStartedInPanel && dy > 70 && dx < 60) {
     closeMenu();
   }
   touchStartX = null;
