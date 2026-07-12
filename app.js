@@ -3,8 +3,12 @@ const recordButton = document.getElementById('recordButton');
 const lensHalo = document.getElementById('lensHalo');
 const liveCaption = document.getElementById('liveCaption');
 const cancelTrash = document.getElementById('cancelTrash');
+const cancelTrashLabel = document.getElementById('cancelTrashLabel');
 const lockIndicator = document.getElementById('lockIndicator');
 const baseRingDuration = 3.5;
+const CANCEL_HINT_LABEL = 'Ziehen zum Abbrechen';
+const CANCEL_ARMED_LABEL = 'Loslassen zum Abbrechen';
+const CANCEL_COMMIT_PX = 100; // Wegstrecke, ab der Loslassen abbricht - bewusst kurz & großzügig
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;
@@ -232,6 +236,8 @@ function stopRecordingInternals() {
   liveCaption.hidden = true;
   cancelTrash.hidden = true;
   cancelTrash.classList.remove('armed');
+  cancelTrash.style.transform = '';
+  cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
   lockIndicator.hidden = true;
   pendingCancel = false;
 
@@ -288,13 +294,22 @@ function onRecordPointerMove(e) {
     return;
   }
 
-  // zum Mülleimer ziehen -> Abbrechen, sobald losgelassen
-  const trashRect = cancelTrash.getBoundingClientRect();
-  const trashCenterX = trashRect.left + trashRect.width / 2;
-  const trashCenterY = trashRect.top + trashRect.height / 2;
-  const dist = Math.hypot(e.clientX - trashCenterX, e.clientY - trashCenterY);
-  pendingCancel = dist < 45;
-  cancelTrash.classList.toggle('armed', pendingCancel);
+  // zur Seite ziehen (links ODER rechts) -> Abbrechen, sobald losgelassen.
+  // Der Hinweis folgt gedämpft dem Finger statt an einem festen, weit
+  // entfernten Punkt zu kleben - so reicht eine kurze, bequeme Bewegung in
+  // die Richtung, die gerade angenehm ist.
+  if (Math.abs(dx) > Math.abs(dy)) {
+    const followX = Math.max(-70, Math.min(70, dx * 0.35));
+    cancelTrash.style.transform = `translate(calc(-50% + ${followX}px), -50%)`;
+    pendingCancel = Math.abs(dx) > CANCEL_COMMIT_PX;
+    cancelTrash.classList.toggle('armed', pendingCancel);
+    cancelTrashLabel.textContent = pendingCancel ? CANCEL_ARMED_LABEL : CANCEL_HINT_LABEL;
+  } else {
+    pendingCancel = false;
+    cancelTrash.classList.remove('armed');
+    cancelTrash.style.transform = '';
+    cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
+  }
 }
 
 function onRecordPointerDown(e) {
@@ -311,6 +326,8 @@ function onRecordPointerDown(e) {
   pendingCancel = false;
   cancelTrash.hidden = false;
   cancelTrash.classList.remove('armed');
+  cancelTrash.style.transform = '';
+  cancelTrashLabel.textContent = CANCEL_HINT_LABEL;
   lockIndicator.hidden = true;
 
   if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
