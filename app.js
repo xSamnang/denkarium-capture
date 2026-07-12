@@ -288,8 +288,10 @@ function onRecordPointerMove(e) {
   const dx = e.clientX - pressStartX;
   const dy = e.clientY - pressStartY;
 
-  // nach unten ziehen -> Sperren (freihändige Aufnahme)
-  if (dy > 70 && Math.abs(dx) < 60) {
+  // nach oben ziehen -> Sperren (freihändige Aufnahme, wie bei
+  // WhatsApp-Sprachnachrichten) - passt außerdem zur Position des
+  // Sperr-Symbols, das oberhalb des Buttons erscheint.
+  if (dy < -70 && Math.abs(dx) < 60) {
     engageLock();
     return;
   }

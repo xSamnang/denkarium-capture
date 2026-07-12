@@ -164,6 +164,12 @@ html, body {
   border: none;
   cursor: pointer;
   padding: 0;
+  /* Ohne dies interpretiert der Browser ein Ziehen auf dem Button als
+     Wisch-/Scroll-Geste und schickt ein 'pointercancel' - das hat die
+     Aufnahme sofort beendet, sobald man den Finger überhaupt bewegt hat.
+     touch-action:none gibt uns die volle, ununterbrochene Kontrolle über
+     die Halten/Ziehen/Sperren/Abbrechen-Geste. */
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;

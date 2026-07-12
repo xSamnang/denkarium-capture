@@ -9,7 +9,10 @@ const PRESETS_KEY = 'denkarium_custom_presets';
 const RING_ENABLED_KEY = 'denkarium_ring_enabled';
 const VIBRATE_KEY = 'denkarium_vibrate';
 const DEFAULT_RING_COLOR = '#ff9a3c';
-const DEFAULT_UI_ACCENT = '#1a1a1a';
+// Frischer Start für Custom statt eines faden Fast-Schwarz: ein sattes,
+// verspieltes Indigo-Violett, das mit dem Sonnenuntergangs-Ring einen
+// warm-kühlen Kontrast bildet und zum Sternenhimmel-Look passt.
+const DEFAULT_UI_ACCENT = '#7c5cff';
 
 // Legacy: ältere Presets speicherten Farbnamen statt Hex-Werte
 const SWATCH_COLORS = {
