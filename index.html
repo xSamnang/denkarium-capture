@@ -464,6 +464,102 @@
           <h4 class="help-group__title">Sicherheit &amp; Datenschutz</h4>
 
           <details class="faq">
+            <summary>Wer kann meine Notizen lesen?</summary>
+            <div class="faq__body">
+              Nur du. Deine Notizen liegen ausschließlich in deinem eigenen Google-Drive-Konto,
+              geschützt durch dein Google-Passwort. Die App hat keinen eigenen Server, auf dem
+              Notizen zwischengespeichert oder eingesehen werden könnten – niemand, der diese
+              App betreibt oder weiterentwickelt, hat Zugriff auf deine Inhalte.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Werden meine Daten an Dritte weitergegeben oder verkauft?</summary>
+            <div class="faq__body">
+              Nein. Es gibt keine Werbung, kein Tracking und keinen Verkauf von Daten. Die
+              einzige Stelle, die technisch überhaupt beteiligt ist, ist Google – weil deine
+              Notizen in deinem eigenen Google-Drive-Ordner landen. Das ist keine Weitergabe an
+              einen unbekannten Dritten, sondern dein eigenes Konto, das du selbst kontrollierst.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Was passiert mit meiner Stimme bei der Spracherkennung?</summary>
+            <div class="faq__body">
+              Für die Sprache-zu-Text-Umwandlung nutzt dein Browser (Chrome) den eingebauten
+              Google-Spracherkennungsdienst – dafür wird deine Sprachaufnahme kurz an Google
+              geschickt und als Text zurückgegeben. Die App selbst speichert die Audiodaten zu
+              keinem Zeitpunkt; sie bekommt nur das fertige Textergebnis und legt dieses direkt
+              in deinem Drive-Ordner ab.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Verwendet die App Cookies, Tracking oder Analyse-Dienste?</summary>
+            <div class="faq__body">
+              Nein. Keine Cookies, kein Google Analytics, keine Werbe-Tracker und keine
+              Drittanbieter-Skripte – außer den offiziellen Google-Bibliotheken, die technisch
+              für die Anmeldung und den Drive-Zugriff nötig sind. Die App weiß nicht, wer du
+              bist, außer über die Google-Anmeldung, die du selbst freigibst.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Ist die Verbindung verschlüsselt?</summary>
+            <div class="faq__body">
+              Ja. Die App wird ausschließlich über HTTPS ausgeliefert, und auch jede
+              Kommunikation mit Google (Anmeldung, Ordner-Auswahl, Speichern) läuft
+              verschlüsselt.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Was genau speichert die App auf meinem Gerät?</summary>
+            <div class="faq__body">
+              Nur lokal in deinem Browser, nie auf einem fremden Server: deinen zeitlich
+              begrenzten Google-Zugangstoken (ca. 55 Minuten gültig), deine Projekte und
+              Farbeinstellungen, eine Liste deiner letzten 10 Notiztexte als Kopie (die
+              Originale liegen zusätzlich in Drive) und deine PIN – ausschließlich als
+              verschlüsselter Prüfwert, nie im Klartext.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie vereinbart sich die App mit der DSGVO?</summary>
+            <div class="faq__body">
+              Die App ist bewusst so gebaut, dass möglichst wenig personenbezogene Daten
+              überhaupt entstehen (Datenminimierung): Es gibt keinen eigenen Server, keine
+              Nutzerkonten und keine Datenbank – deine Notizen werden direkt in dein eigenes
+              Google-Konto geschrieben, nicht bei der App gespeichert. Die eingeschränkte
+              Berechtigung (drive.file) sorgt zusätzlich dafür, dass nur das sichtbar ist, was
+              du selbst auswählst. Aktuell wird die App als persönliches Projekt betrieben;
+              solltest du sie für weitere Nutzer öffnen wollen, würde vor der Veröffentlichung
+              zusätzlich eine förmliche Datenschutzerklärung mit Impressum ergänzt.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Wie kann ich alle meine Daten vollständig löschen?</summary>
+            <div class="faq__body">
+              Deine Notizen liegen in deinem eigenen Google Drive – lösche dort einfach den
+              betreffenden Ordner. Um zusätzlich alle lokal auf deinem Gerät gespeicherten
+              Daten (Einstellungen, PIN, Zugangstoken) zu entfernen, leere in den
+              Browser-Einstellungen die Website-Daten für diese Seite bzw. deinstalliere die
+              installierte App und entferne die Google-Berechtigung in deinem
+              Google-Konto unter „Apps mit Kontozugriff“.
+            </div>
+          </details>
+
+          <details class="faq">
+            <summary>Ist der Quellcode der App einsehbar?</summary>
+            <div class="faq__body">
+              Ja. Der komplette Code ist öffentlich auf GitHub einsehbar – jeder kann
+              nachvollziehen, dass keine versteckten Datenübertragungen stattfinden und die App
+              genau das tut, was hier beschrieben ist.
+            </div>
+          </details>
+
+          <details class="faq">
             <summary>Wofür ist die PIN da?</summary>
             <div class="faq__body">
               Die PIN schützt nur den Bereich „Letzte Einträge“, damit niemand mit Zugriff auf

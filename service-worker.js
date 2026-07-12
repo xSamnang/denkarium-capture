@@ -1,4 +1,4 @@
-const CACHE_NAME = "denkarium-capture-shell-v7";
+const CACHE_NAME = "denkarium-capture-shell-v8";
 const APP_SHELL = [
   "./",
   "./index.html",
