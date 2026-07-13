@@ -5,12 +5,23 @@ const liveCaption = document.getElementById('liveCaption');
 const cancelTrash = document.getElementById('cancelTrash');
 const lockIndicator = document.getElementById('lockIndicator');
 const baseRingDuration = 3.5;
-// Abbrechen-Geste: nach unten rechts ziehen - dahin lässt sich der Button
-// am bequemsten mit dem rechten Daumen bewegen (dort hält man ihn meistens).
-const CANCEL_COMMIT_X = 70;
-const CANCEL_COMMIT_Y = 50;
-let cancelAnchorX = 0;
-let cancelAnchorY = 0;
+
+// Abbrechen (unten rechts) und Sperren/Freihändig (oben links) liegen auf
+// derselben Diagonale durch die Button-Mitte - symmetrisch, und für einen
+// Daumen an der rechten Bildschirmseite in beide Richtungen bequem
+// erreichbar (kurzer Flick bzw. derselbe Bogen weitergezogen). Die Hinweise
+// starten auf Höhe des Lichtrings (nie darüber, keine Überlappung) und
+// wandern mit dem Ziehfortschritt weiter nach außen.
+const DIAG = Math.SQRT1_2; // 1/√2 - Komponente einer 45°-Diagonale
+const HALO_SCALE = 1.45; // muss zu .lens-halo / .ring-disabled .record-button passen
+const HINT_GAP = 26; // Abstand zwischen Lichtring-Rand und Ruheposition
+const HINT_COMMIT_GAP = 90; // zusätzlicher Weg bis zur eingerasteten Position
+const GESTURE_COMMIT_DIST = 90; // Ziehweg entlang der Diagonale bis zum Auslösen
+const GESTURE_MAX_DRIFT = 55; // erlaubte Abweichung von der Diagonale
+let gestureCenterX = 0;
+let gestureCenterY = 0;
+let hintRestDist = 0;
+let hintCommitDist = 0;
 
 let rafId = null;
 let audioCtx, analyser, dataArray, stream;
@@ -237,8 +248,13 @@ function stopRecordingInternals() {
   locked = false;
   liveCaption.hidden = true;
   cancelTrash.hidden = true;
-  cancelTrash.classList.remove('armed');
+  cancelTrash.classList.remove('committed');
+  cancelTrash.style.removeProperty('--progress');
+  cancelTrash.style.removeProperty('--progress-num');
   lockIndicator.hidden = true;
+  lockIndicator.classList.remove('committed');
+  lockIndicator.style.removeProperty('--progress');
+  lockIndicator.style.removeProperty('--progress-num');
   pendingCancel = false;
 
   if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
@@ -274,13 +290,26 @@ function cancelRecording() {
   stopSpeechAndRun('cancel');
 }
 
+// Positioniert/färbt einen Geste-Hinweis entlang seiner Diagonale: dir=+1
+// unten rechts (Abbrechen), dir=-1 oben links (Sperren). progress 0 = Ruhe-
+// position knapp außerhalb des Lichtrings, progress 1 = eingerastet.
+function setHintProgress(el, dir, progress) {
+  const dist = hintRestDist + (hintCommitDist - hintRestDist) * progress;
+  el.style.left = (gestureCenterX + dir * dist * DIAG) + 'px';
+  el.style.top = (gestureCenterY + dir * dist * DIAG) + 'px';
+  el.style.setProperty('--progress', Math.round(progress * 100) + '%');
+  el.style.setProperty('--progress-num', progress.toFixed(2));
+}
+
 function engageLock() {
   locked = true;
-  lockIndicator.hidden = false;
+  lockIndicator.classList.add('committed');
+  setHintProgress(lockIndicator, -1, 1);
   cancelTrash.hidden = true;
-  cancelTrash.classList.remove('armed');
+  cancelTrash.classList.remove('committed');
   pendingCancel = false;
   document.removeEventListener('pointermove', onRecordPointerMove);
+  if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(20);
 }
 
 function onRecordPointerMove(e) {
@@ -288,31 +317,27 @@ function onRecordPointerMove(e) {
   const dx = e.clientX - pressStartX;
   const dy = e.clientY - pressStartY;
 
-  // nach oben ziehen -> Sperren (freihändige Aufnahme, wie bei
-  // WhatsApp-Sprachnachrichten) - passt außerdem zur Position des
-  // Sperr-Symbols, das oberhalb des Buttons erscheint.
-  if (dy < -70 && Math.abs(dx) < 60) {
+  // Ziehbewegung auf die gemeinsame Diagonale projizieren: unten rechts
+  // (along > 0) -> Abbrechen, oben links (along < 0) -> Sperren/freihändig.
+  // "across" misst die Abweichung von dieser Achse - je weiter man daneben
+  // liegt, desto weniger zählt die Bewegung (verhindert versehentliches
+  // Auslösen bei einer eher waagerechten oder senkrechten Wischbewegung).
+  const along = (dx + dy) * DIAG;
+  const across = (dx - dy) * DIAG;
+  const onAxis = Math.max(0, 1 - Math.abs(across) / GESTURE_MAX_DRIFT);
+
+  const cancelProgress = Math.min(1, Math.max(0, along / GESTURE_COMMIT_DIST)) * onAxis;
+  const lockProgress = Math.min(1, Math.max(0, -along / GESTURE_COMMIT_DIST)) * onAxis;
+
+  setHintProgress(cancelTrash, 1, cancelProgress);
+  pendingCancel = cancelProgress >= 1;
+  cancelTrash.classList.toggle('committed', pendingCancel);
+
+  if (lockProgress >= 1) {
     engageLock();
     return;
   }
-
-  // nach unten rechts ziehen -> Abbrechen, sobald losgelassen. Der
-  // Papierkorb folgt gedämpft weiter in diese Richtung; jede andere
-  // Richtung zeigt ihn nur an seinem Ausgangspunkt als Hinweis, ohne
-  // zu "scharf" zu werden.
-  if (dx > 0 && dy > 0) {
-    const followX = Math.min(55, dx * 0.3);
-    const followY = Math.min(55, dy * 0.3);
-    cancelTrash.style.left = (cancelAnchorX + followX) + 'px';
-    cancelTrash.style.top = (cancelAnchorY + followY) + 'px';
-    pendingCancel = dx > CANCEL_COMMIT_X && dy > CANCEL_COMMIT_Y;
-    cancelTrash.classList.toggle('armed', pendingCancel);
-  } else {
-    pendingCancel = false;
-    cancelTrash.classList.remove('armed');
-    cancelTrash.style.left = cancelAnchorX + 'px';
-    cancelTrash.style.top = cancelAnchorY + 'px';
-  }
+  setHintProgress(lockIndicator, -1, lockProgress);
 }
 
 function onRecordPointerDown(e) {
@@ -328,19 +353,24 @@ function onRecordPointerDown(e) {
   locked = false;
   pendingCancel = false;
 
-  // Papierkorb-Hinweis schräg unten rechts vom Aufnahme-Kreis positionieren -
-  // das ist die Richtung, in die man ihn zum Abbrechen ziehen soll.
+  // Beide Geste-Hinweise von Anfang an sichtbar, symmetrisch auf der
+  // Diagonale durch die Button-Mitte positioniert - knapp außerhalb des
+  // Lichtrings (bzw. des vergrößerten Buttons, wenn der Ring deaktiviert
+  // ist), damit sie nie mit dem Aufnahme-Kreis überlappen.
   const btnRect = recordButton.getBoundingClientRect();
-  const btnCenterX = btnRect.left + btnRect.width / 2;
-  const btnCenterY = btnRect.top + btnRect.height / 2;
-  const diagOffset = btnRect.width * 0.4;
-  cancelAnchorX = btnCenterX + diagOffset;
-  cancelAnchorY = btnCenterY + diagOffset;
-  cancelTrash.style.left = cancelAnchorX + 'px';
-  cancelTrash.style.top = cancelAnchorY + 'px';
+  gestureCenterX = btnRect.left + btnRect.width / 2;
+  gestureCenterY = btnRect.top + btnRect.height / 2;
+  const outerRadius = (btnRect.width / 2) * (isRingEnabled() ? HALO_SCALE : 1);
+  hintRestDist = outerRadius + HINT_GAP;
+  hintCommitDist = hintRestDist + HINT_COMMIT_GAP;
+
+  cancelTrash.classList.remove('committed');
   cancelTrash.hidden = false;
-  cancelTrash.classList.remove('armed');
-  lockIndicator.hidden = true;
+  setHintProgress(cancelTrash, 1, 0);
+
+  lockIndicator.classList.remove('committed');
+  lockIndicator.hidden = false;
+  setHintProgress(lockIndicator, -1, 0);
 
   if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
 

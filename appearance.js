@@ -9,10 +9,10 @@ const PRESETS_KEY = 'denkarium_custom_presets';
 const RING_ENABLED_KEY = 'denkarium_ring_enabled';
 const VIBRATE_KEY = 'denkarium_vibrate';
 const DEFAULT_RING_COLOR = '#ff9a3c';
-// Frischer Start für Custom statt eines faden Fast-Schwarz: ein sattes,
-// verspieltes Indigo-Violett, das mit dem Sonnenuntergangs-Ring einen
-// warm-kühlen Kontrast bildet und zum Sternenhimmel-Look passt.
-const DEFAULT_UI_ACCENT = '#7c5cff';
+// Custom startet im hellen Menü-Stil (wie style.css [data-theme="custom"]);
+// ein sattes Violett statt des Orange aus dem hellen Modus hält den Akzent
+// trotzdem klar von Hell/Dunkel unterscheidbar.
+const DEFAULT_UI_ACCENT = '#7c3aed';
 
 // Legacy: ältere Presets speicherten Farbnamen statt Hex-Werte
 const SWATCH_COLORS = {
@@ -36,7 +36,7 @@ function resolveColor(value, fallback) {
 }
 
 function defaultPreset() {
-  return { inner: '#000000', outer: 'starfield', outerPhoto: null, ring: DEFAULT_RING_COLOR, uiAccent: DEFAULT_UI_ACCENT };
+  return { inner: '#000000', outer: '#ffffff', outerPhoto: null, ring: DEFAULT_RING_COLOR, uiAccent: DEFAULT_UI_ACCENT };
 }
 
 function loadPresets() {
@@ -127,15 +127,15 @@ function mixHex(hex, target, t) {
   return `#${ch(0)}${ch(2)}${ch(4)}`;
 }
 
-// Akzentfarbe so aufhellen, dass sie als Text/Symbol auf der dunklen
-// Menüfläche (Custom-Modus) sicher lesbar bleibt - ein sehr dunkler
-// Akzent würde sonst mit dem Hintergrund verschwimmen.
-function readableAccentOnDark(hex) {
+// Akzentfarbe so abdunkeln, dass sie als Text/Symbol auf der hellen
+// Menüfläche (Custom-Modus) sicher lesbar bleibt - eine sehr helle
+// Akzentwahl würde sonst mit dem weißen Hintergrund verschwimmen.
+function readableAccentOnLight(hex) {
   let t = 0;
   let out = hex;
-  while (relLuminance(out) < 0.55 && t < 1) {
+  while (relLuminance(out) > 0.55 && t < 1) {
     t += 0.12;
-    out = mixHex(hex, '#ffffff', t);
+    out = mixHex(hex, '#000000', t);
   }
   return out;
 }
@@ -177,9 +177,9 @@ function setRingColor(hex) {
 function setAccent(hex) {
   document.documentElement.style.setProperty('--accent', hex);
   document.documentElement.style.setProperty('--accent-fg', contrastingTextColor(hex));
-  // Custom-Modus nutzt die dunkle Menüfläche - Text/Symbole in Akzentfarbe
-  // werden bei Bedarf aufgehellt, damit sie immer lesbar bleiben.
-  document.documentElement.style.setProperty('--accent-strong', readableAccentOnDark(hex));
+  // Custom-Modus nutzt die helle Menüfläche - Text/Symbole in Akzentfarbe
+  // werden bei Bedarf abgedunkelt, damit sie immer lesbar bleiben.
+  document.documentElement.style.setProperty('--accent-strong', readableAccentOnLight(hex));
 }
 
 function clearAccentOverride() {

@@ -27,8 +27,7 @@ html[data-theme="light"] {
   --scrim: rgba(25, 18, 12, 0.35);
 }
 
-html[data-theme="dark"],
-html[data-theme="custom"] {
+html[data-theme="dark"] {
   color-scheme: dark;
   --accent: #ffa94d;
   --accent-fg: #2b1503;
@@ -39,6 +38,22 @@ html[data-theme="custom"] {
   --muted: #9aa0a8;
   --outline: rgba(255, 255, 255, 0.13);
   --scrim: rgba(0, 0, 0, 0.55);
+}
+
+/* Custom-Modus startet im hellen Menü-Stil, aber mit violettem statt
+   orangefarbenem Akzent - bleibt so vom hellen und dunklen Modus
+   unterscheidbar, auch bevor eigene Farben gewählt wurden. */
+html[data-theme="custom"] {
+  color-scheme: light;
+  --accent: #7c3aed;
+  --accent-fg: #ffffff;
+  --accent-strong: var(--accent);
+  --surface: #ffffff;
+  --surface-2: rgba(15, 15, 25, 0.05);
+  --on-surface: #17181c;
+  --muted: #5f6470;
+  --outline: rgba(15, 15, 25, 0.14);
+  --scrim: rgba(25, 18, 12, 0.35);
 }
 
 * {
@@ -246,67 +261,81 @@ html, body {
   display: none;
 }
 
-/* Abbrechen-Hinweis: taucht schräg unten rechts vom Aufnahme-Kreis auf -
-   dorthin lässt sich der Aufnahme-Button am bequemsten mit dem rechten
-   Daumen ziehen - und folgt gedämpft weiter, während man zieht. */
-.cancel-trash {
+/* Geste-Hinweise: EIN gemeinsames Bauteil für Abbrechen (unten rechts) und
+   Sperren/Freihändig (oben links) - symmetrisch durch den Button-Mittelpunkt
+   gespiegelt, gleich groß, gleicher Aufbau (Icon -> Pille mit Beschriftung),
+   nur die Zielfarbe (--tint) und das Icon unterscheiden sich. Beide starten
+   auf Höhe des Lichtrings (nie darüber, keine Überlappung) und wandern mit
+   dem Ziehfortschritt (--progress) weiter nach außen, statt hart bei
+   Erreichen der Schwelle aufzutauchen. Beide Richtungen liegen auf derselben
+   Diagonale, die für einen Daumen an der rechten Bildschirmseite bequem
+   erreichbar ist: kurzer Flick nach unten rechts zum Abbrechen, derselbe
+   Bogen weitergezogen nach oben links zum Sperren. */
+.gesture-hint {
+  --progress: 0%;
+  --progress-num: 0;
+  --tint: var(--muted);
   position: fixed;
   left: 0;
   top: 0;
-  transform: translate(-50%, -50%);
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(calc(0.75 + 0.25 * var(--progress-num, 0)));
+  height: 44px;
+  min-width: 44px;
+  padding: 0 13px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--outline);
-  background: var(--surface);
-  color: var(--muted);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--tint) var(--progress), var(--outline));
+  background: color-mix(in srgb, var(--tint) var(--progress), var(--surface));
+  color: color-mix(in srgb, #ffffff var(--progress), var(--muted));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  opacity: calc(0.55 + 0.45 * var(--progress-num, 0));
   z-index: 4;
   pointer-events: none;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-    left 0.12s ease-out, top 0.12s ease-out;
+  transition: left 0.1s ease-out, top 0.1s ease-out, background 0.12s ease-out,
+    border-color 0.12s ease-out, color 0.12s ease-out;
 }
-.cancel-trash svg {
-  width: 22px;
-  height: 22px;
-  transition: transform 0.15s var(--spring);
+.gesture-hint[hidden] { display: none; }
+.gesture-hint svg { width: 18px; height: 18px; flex: none; }
+.gesture-hint__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.2s var(--ease-out), opacity 0.15s ease;
 }
-.cancel-trash[hidden] { display: none; }
-.cancel-trash.armed {
-  background: #e03131;
-  border-color: #e03131;
-  color: #ffffff;
-}
-.cancel-trash.armed svg {
-  transform: scale(1.2) rotate(-8deg);
+.gesture-hint.committed .gesture-hint__label {
+  max-width: 160px;
+  opacity: 1;
 }
 
-.lock-indicator {
-  position: fixed;
-  top: 22%;
-  left: 50%;
-  transform: translateX(-50%) scale(1);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #f2f2f2;
-  background: rgba(128, 128, 138, 0.3);
-  z-index: 4;
+.gesture-hint--cancel { --tint: #e03131; }
+.gesture-hint--cancel.committed svg {
+  transform: scale(1.1) rotate(-8deg);
+}
+
+.gesture-hint--lock { --tint: var(--accent-strong); }
+/* Pfeil zeigt nach oben links - dieselbe Richtung, in die man zum Sperren zieht. */
+.gesture-hint__chevron { transform: rotate(-45deg); }
+.gesture-hint__lock { display: none; }
+.gesture-hint--lock.committed {
   cursor: pointer;
-  animation: lock-pop 0.3s var(--spring);
+  pointer-events: auto;
+  animation: gesture-commit-pop 0.3s var(--spring);
 }
-.lock-indicator svg { width: 20px; height: 20px; }
-@keyframes lock-pop {
-  from { transform: translateX(-50%) scale(0.5); opacity: 0; }
-  to { transform: translateX(-50%) scale(1); opacity: 1; }
+.gesture-hint--lock.committed .gesture-hint__chevron { display: none; }
+.gesture-hint--lock.committed .gesture-hint__lock { display: block; }
+
+@keyframes gesture-commit-pop {
+  from { transform: translate(-50%, -50%) scale(0.75); }
+  50% { transform: translate(-50%, -50%) scale(1.08); }
+  to { transform: translate(-50%, -50%) scale(1); }
 }
-.lock-indicator[hidden] { display: none; }
 
 /* ==========================================================================
    Chrome: Projekt-Pill (oben), Theme-Switcher (unten links), FAB (unten rechts)
