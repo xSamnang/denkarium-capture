@@ -244,11 +244,12 @@ function stopRecordingInternals() {
   recordButton.classList.remove('recording');
   recordButton.style.transform = '';
   recordButton.style.boxShadow = '';
+  recordButton.setAttribute('aria-label', 'Aufnahme starten');
   recording = false;
   locked = false;
   liveCaption.hidden = true;
   cancelTrash.hidden = true;
-  cancelTrash.classList.remove('committed');
+  cancelTrash.classList.remove('committed', 'static');
   cancelTrash.style.removeProperty('--progress');
   cancelTrash.style.removeProperty('--progress-num');
   lockIndicator.hidden = true;
@@ -340,37 +341,58 @@ function onRecordPointerMove(e) {
   setHintProgress(lockIndicator, -1, lockProgress);
 }
 
-function onRecordPointerDown(e) {
-  if (recording && locked) {
-    // Tippen während gesperrter Aufnahme beendet sie
-    stopRecording();
-    return;
-  }
-  if (recording) return;
+function setGestureLabels(lockText, cancelText) {
+  lockIndicator.querySelector('.gesture-hint__label').textContent = lockText;
+  lockIndicator.setAttribute('aria-label', lockText);
+  cancelTrash.querySelector('.gesture-hint__label').textContent = cancelText;
+  cancelTrash.setAttribute('aria-label', cancelText);
+}
 
-  pressStartX = e.clientX;
-  pressStartY = e.clientY;
-  locked = false;
-  pendingCancel = false;
+// Gemeinsamer Start für alle Eingabearten. source unterscheidet, wie die
+// Aufnahme bedient wird:
+// - 'touch'/'pen': wie bisher - halten, per Ziehen sperren/abbrechen.
+// - 'mouse'/'keyboard': eine Maustaste minutenlang zu halten (oder eine
+//   Taste gedrückt zu halten) ist unbequem, anders als ein Handy am Mund.
+//   Klick bzw. Tastendruck schaltet daher direkt in den freihändigen
+//   Zustand - erneuter Klick/Tastendruck beendet, Esc verwirft. Die
+//   Ziehen-Hinweise werden dafür sofort fertig positioniert angezeigt,
+//   ohne die Zieh-Animation durchzuspielen.
+function beginRecording(gestureRect, source) {
+  const interactive = source !== 'touch' && source !== 'pen';
 
-  // Beide Geste-Hinweise von Anfang an sichtbar, symmetrisch auf der
-  // Diagonale durch die Button-Mitte positioniert - knapp außerhalb des
-  // Lichtrings (bzw. des vergrößerten Buttons, wenn der Ring deaktiviert
-  // ist), damit sie nie mit dem Aufnahme-Kreis überlappen.
-  const btnRect = recordButton.getBoundingClientRect();
-  gestureCenterX = btnRect.left + btnRect.width / 2;
-  gestureCenterY = btnRect.top + btnRect.height / 2;
-  const outerRadius = (btnRect.width / 2) * (isRingEnabled() ? HALO_SCALE : 1);
+  gestureCenterX = gestureRect.left + gestureRect.width / 2;
+  gestureCenterY = gestureRect.top + gestureRect.height / 2;
+  const outerRadius = (gestureRect.width / 2) * (isRingEnabled() ? HALO_SCALE : 1);
   hintRestDist = outerRadius + HINT_GAP;
   hintCommitDist = hintRestDist + HINT_COMMIT_GAP;
 
-  cancelTrash.classList.remove('committed');
+  recordButton.setAttribute('aria-label', 'Aufnahme läuft, erneut aktivieren zum Beenden');
+  pendingCancel = false;
+  cancelTrash.classList.remove('committed', 'static');
   cancelTrash.hidden = false;
-  setHintProgress(cancelTrash, 1, 0);
-
   lockIndicator.classList.remove('committed');
   lockIndicator.hidden = false;
-  setHintProgress(lockIndicator, -1, 0);
+
+  if (interactive) {
+    locked = true;
+    setHintProgress(lockIndicator, -1, 1);
+    lockIndicator.classList.add('committed');
+    // Farbe des Abbrechen-Hinweises bewusst neutral halten (kein Alarmrot) -
+    // er ist hier eine jederzeit verfügbare Aktion, keine Ziehschwelle.
+    setHintProgress(cancelTrash, 1, 1);
+    cancelTrash.style.setProperty('--progress', '0%');
+    cancelTrash.classList.add('static');
+    setGestureLabels(
+      source === 'keyboard' ? 'Erneut drücken zum Beenden' : 'Klicken zum Beenden',
+      'Esc zum Verwerfen'
+    );
+  } else {
+    locked = false;
+    setHintProgress(cancelTrash, 1, 0);
+    setHintProgress(lockIndicator, -1, 0);
+    setGestureLabels('Tippen zum Beenden', 'Abbrechen');
+    document.addEventListener('pointermove', onRecordPointerMove);
+  }
 
   if (navigator.vibrate && isVibrationEnabled()) navigator.vibrate(15);
 
@@ -379,19 +401,45 @@ function onRecordPointerDown(e) {
   // nötige Anmeldung zuverlässig, statt erst Sekunden später beim
   // automatischen Speichern nach der Aufnahme geblockt zu werden.
   prefetchAccessToken();
+  startRecording();
+}
+
+// Von einem konfigurierten Tastenkürzel ausgelöst (siehe hotkeys.js) - global,
+// unabhängig davon, wo der Fokus liegt. Verhält sich wie die Maus/Tastatur-
+// Bedienung des Buttons: freihändig aufnehmen, erneutes Auslösen speichert,
+// Esc verwirft (eigener globaler Handler weiter oben).
+function toggleRecordingFromHotkey() {
+  if (recording) { stopRecording(); return; }
+  beginRecording(recordButton.getBoundingClientRect(), 'keyboard');
+}
+
+function onRecordPointerDown(e) {
+  // Nur die primäre Taste (Finger/linke Maustaste) bedient den Button direkt.
+  // Mittlere/rechte/Seitentasten bleiben so für globale Maus-Kürzel frei,
+  // ohne hier versehentlich eine Aufnahme zu starten.
+  if (e.button !== 0) return;
+
+  if (recording && locked) {
+    // Tippen/Klicken während gesperrter Aufnahme beendet sie
+    stopRecording();
+    return;
+  }
+  if (recording) return;
+
+  pressStartX = e.clientX;
+  pressStartY = e.clientY;
 
   // Pointer an den Button binden, damit pointerup/-move zuverlässig
   // ankommen, auch wenn der Finger beim Ziehen (Sperren/Abbrechen) den
   // Button verlässt.
   try { recordButton.setPointerCapture(e.pointerId); } catch (err) { /* nicht unterstützt */ }
 
-  document.addEventListener('pointermove', onRecordPointerMove);
-  startRecording();
+  beginRecording(recordButton.getBoundingClientRect(), e.pointerType);
 }
 
 function onRecordPointerUp() {
   document.removeEventListener('pointermove', onRecordPointerMove);
-  if (!recording || locked) return; // im gesperrten Zustand läuft die Aufnahme weiter
+  if (!recording || locked) return; // im gesperrten/freihändigen Zustand läuft die Aufnahme weiter
 
   if (pendingCancel) {
     cancelRecording();
@@ -407,14 +455,52 @@ recordButton.addEventListener('pointerdown', onRecordPointerDown);
   recordButton.addEventListener(evt, onRecordPointerUp)
 );
 
+// Native Button-Aktivierung ist unmodifiziertes Leertaste/Enter. Kombinationen
+// mit Strg/Alt/Umschalt/Meta absichtlich durchlassen - so kann derselbe
+// fokussierte Button-Tastendruck als globales Kürzel dienen, ohne dass die
+// Aktion doppelt (hier + in hotkeys.js) ausgelöst wird.
+function isPlainActivation(e) {
+  return (e.key === ' ' || e.key === 'Enter') &&
+    !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey;
+}
+
+// Tastatur: Leertaste/Enter starten und beenden die Aufnahme wie ein Klick
+// (siehe beginRecording) - ohne das würde der Aufnahme-Button für
+// Tastatur-Nutzer:innen trotz Fokus schlicht nichts tun, da native
+// Button-Aktivierung nur ein 'click'-Event auslöst, kein 'pointerdown'.
+recordButton.addEventListener('keydown', (e) => {
+  if (!isPlainActivation(e)) return;
+  e.preventDefault(); // verhindert Bildscroll (Leertaste) bzw. doppeltes Auslösen
+  if (e.repeat) return;
+  if (recording && locked) { stopRecording(); return; }
+  if (recording) return;
+  beginRecording(recordButton.getBoundingClientRect(), 'keyboard');
+});
+
 lockIndicator.addEventListener('click', () => {
   if (recording && locked) stopRecording();
 });
 lockIndicator.addEventListener('keydown', (e) => {
-  if ((e.key === 'Enter' || e.key === ' ') && recording && locked) {
+  if (isPlainActivation(e) && recording && locked) {
     e.preventDefault();
     stopRecording();
   }
+});
+
+// Abbrechen-Hinweis ist nur im freihändigen Zustand (Maus/Tastatur, siehe
+// beginRecording) tatsächlich anklickbar - pointer-events dafür kommt aus
+// der .static-Klasse in style.css, nicht aus einer Sichtbarkeitsprüfung hier.
+cancelTrash.addEventListener('click', () => {
+  if (recording && locked) cancelRecording();
+});
+
+// Esc verwirft eine laufende Aufnahme - unabhängig davon, wie sie gestartet
+// wurde. Andere Overlays haben teils eigene Escape-Handler; hier nur die
+// Fälle, die bisher keinen hatten (siehe unten für dialOpen/menuSheet/etc.).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !recording) return;
+  e.preventDefault();
+  cancelRecording();
 });
 
 idleLoop(performance.now());
@@ -472,6 +558,14 @@ function addRecentEntry(entry) {
   renderRecentEntries();
 }
 
+// Legt eine neue Notiz in Drive an und übernimmt sie in die "Letzten Einträge".
+// Gemeinsam genutzt vom Texteingabe-Overlay und der Schnellnotiz-Leiste unter
+// dem Aufnahme-Kreis (Desktop), damit beide Wege identisch speichern.
+async function persistNewNote(text) {
+  const result = await saveNoteToDrive(text);
+  addRecentEntry({ id: result.id, name: result.name, text, createdAt: Date.now() });
+}
+
 recentEntriesList.addEventListener('click', (e) => {
   const btn = e.target.closest('.recent-entry');
   if (!btn) return;
@@ -512,8 +606,7 @@ textEntrySave.addEventListener('click', async () => {
       saveRecentEntries();
       renderRecentEntries();
     } else {
-      const result = await saveNoteToDrive(text);
-      addRecentEntry({ id: result.id, name: result.name, text, createdAt: Date.now() });
+      await persistNewNote(text);
     }
     textEntry.hidden = true;
     showToast('In Google Drive gespeichert');
@@ -528,6 +621,57 @@ textEntrySave.addEventListener('click', async () => {
     textEntrySave.disabled = false;
   }
 });
+
+// --- Schnellnotiz-Leiste (Desktop): direkt unter dem Aufnahme-Kreis tippen ---
+// Eingabefeld wie eine Suchleiste - reinklicken, Notiz schreiben, Enter speichert
+// sie sofort ins aktive Projekt (gleicher Weg wie das Texteingabe-Overlay).
+const quickNote = document.getElementById('quickNote');
+const quickNoteInput = document.getElementById('quickNoteInput');
+const quickNoteSend = document.getElementById('quickNoteSend');
+
+if (quickNote) {
+  let quickNoteWarmed = false;
+  const syncSendState = () => { quickNoteSend.disabled = quickNoteInput.value.trim() === ''; };
+  quickNoteInput.addEventListener('input', () => {
+    syncSendState();
+    // Sobald wirklich getippt wird, das Google-Token einmalig vorwärmen (leise,
+    // sofern schon einmal freigegeben) - so ist es beim Speichern bereit, ohne
+    // dass ein bloßes Reinklicken ins Feld schon eine Anmeldung anstößt.
+    if (!quickNoteWarmed && quickNoteInput.value.trim() !== '') {
+      quickNoteWarmed = true;
+      prefetchAccessToken();
+    }
+  });
+  quickNoteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') quickNoteInput.blur();
+  });
+
+  quickNote.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = quickNoteInput.value.trim();
+    if (!text) return;
+
+    quickNoteInput.disabled = true;
+    quickNoteSend.disabled = true;
+    showToast('Speichere in Google Drive …');
+    try {
+      await persistNewNote(text);
+      quickNoteInput.value = '';
+      showToast('In Google Drive gespeichert');
+    } catch (err) {
+      console.error('Schnellnotiz speichern fehlgeschlagen:', err);
+      if (err && (err.error === 'access_denied' || err.error === 'popup_closed_by_user')) {
+        showToast('Google-Anmeldung abgebrochen – bitte erneut versuchen');
+      } else {
+        showToast('Fehler beim Speichern – bitte erneut versuchen');
+      }
+    } finally {
+      quickNoteInput.disabled = false;
+      syncSendState();
+      quickNoteInput.focus();
+    }
+  });
+}
 
 // --- Plus-Knopf: Schnellmenü (Notiz/Datei), langes Drücken öffnet direkt die Notiz ---
 const fabWrap = document.getElementById('fabWrap');
@@ -578,6 +722,14 @@ fabBtn.addEventListener('pointerdown', () => {
   })
 );
 fabBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+// Tastatur: native Button-Aktivierung feuert nur 'click', kein 'pointerdown' -
+// ohne diesen Handler wäre der Plus-Knopf per Tastatur nicht bedienbar.
+fabBtn.addEventListener('keydown', (e) => {
+  if (!isPlainActivation(e)) return; // modifizierte Kombis bleiben für Kürzel frei
+  e.preventDefault();
+  if (e.repeat) return;
+  dialOpen ? closeDial() : openDial();
+});
 
 dialNote.addEventListener('click', () => { closeDial(); openTextEntry(''); });
 dialFile.addEventListener('click', () => { closeDial(); fileInput.click(); });
@@ -639,6 +791,30 @@ function activateTab(target) {
 
 menuClose.addEventListener('click', closeMenu);
 menuBackdrop.addEventListener('click', closeMenu);
+
+// Desktop-Einstieg: Das Menü (Einstellungen/Letzte Einträge/Hilfe) lässt
+// sich sonst nur per Wisch-Geste öffnen - ohne Touchscreen unerreichbar.
+// Der Knopf selbst ist per CSS nur bei Maus-Eingabe sichtbar (siehe
+// .desktop-menu-btn in style.css), damit sich am mobilen Layout nichts
+// ändert.
+const desktopMenuBtn = document.getElementById('desktopMenuBtn');
+desktopMenuBtn.addEventListener('click', () => {
+  menuSheet.classList.contains('open') ? closeMenu() : openMenu();
+});
+
+// Esc schließt das jeweils oberste offene Overlay - Reihenfolge von innen
+// (dringlichster/zuletzt geöffneter Zustand) nach außen. Die laufende
+// Aufnahme hat einen eigenen, höher priorisierten Escape-Handler weiter
+// oben (bricht sofort ab, statt nur ein Overlay zu schließen).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!pinGate.hidden) { closePinGate(); return; }
+  if (!nameDialog.hidden) { closeNameDialog(); return; }
+  if (!textEntry.hidden) { textEntry.hidden = true; return; }
+  if (!projectMenu.hidden) { closeProjectMenu(); return; }
+  if (dialOpen) { closeDial(); return; }
+  if (menuSheet.classList.contains('open')) { closeMenu(); return; }
+});
 
 // Tab wählen - "Letzte Einträge" verlangt einmal pro Sitzung die PIN.
 function selectTab(target) {

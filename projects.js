@@ -38,6 +38,25 @@ function getActiveProject() {
   return projects.find((p) => p.id === activeProjectId) || projects[0];
 }
 
+// Wechselt zyklisch zum nächsten (+1) bzw. vorherigen (-1) Projekt.
+// Wird von den Tastenkürzeln aufgerufen (siehe hotkeys.js); der Umbruch am
+// Ende sorgt dafür, dass man mit einem Kürzel durch alle Projekte kommt.
+function stepProject(direction) {
+  if (projects.length < 2) {
+    showToast('Nur ein Projekt vorhanden');
+    return;
+  }
+  const idx = projects.findIndex((p) => p.id === activeProjectId);
+  const nextIdx = (idx + direction + projects.length) % projects.length;
+  activeProjectId = projects[nextIdx].id;
+  saveProjects();
+  renderProjectUI();
+  if (typeof isVibrationEnabled === 'function' && navigator.vibrate && isVibrationEnabled()) {
+    navigator.vibrate(8);
+  }
+  showToast('Projekt: ' + getActiveProject().name);
+}
+
 function setProjectFolder(projectId, folderId) {
   const project = projects.find((p) => p.id === projectId);
   if (!project) return;

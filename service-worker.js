@@ -1,4 +1,4 @@
-const CACHE_NAME = "denkarium-capture-shell-v17";
+const CACHE_NAME = "denkarium-capture-shell-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "./drive.js",
   "./appearance.js",
   "./projects.js",
+  "./hotkeys.js",
   "./manifest.json"
 ];
 
